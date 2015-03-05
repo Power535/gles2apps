@@ -64,8 +64,8 @@ class Texture
       GLuint   m_textureid;
 
       int      m_mvp_pos;
-      int      m_attriblocation;
-
+      int      m_attriblocation_position;
+      int      m_attriblocation_inputtexcoord;
 
       GLubyte*  m_texdata;
       GLfixed*  m_vertices;

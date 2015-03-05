@@ -6,9 +6,9 @@
 #include <GLES2/gl2.h>
 #include <GLES2/gl2ext.h>
 
-#include <gles2texture.h>
-#include <gles2math.h>
-#include <gles2util.h>
+#include "gles2texture.h"
+#include "gles2math.h"
+#include "gles2util.h"
 
 #include <png.h>
 
@@ -213,8 +213,7 @@ void Texture::Create(float x, float y, float width, float height, int twidth, in
     m_programhandle = create_program(m_vertshader, m_fragshader);
 
     glBindAttribLocation(m_programhandle, 0, "position");
-
-    glUseProgram(m_programhandle);
+    glBindAttribLocation(m_programhandle, 1, "inputtexcoord");
 
     j = glGetError();
     if (j != GL_NO_ERROR) {
@@ -251,24 +250,23 @@ void Texture::Draw()
 
     glBindTexture(GL_TEXTURE_2D, m_textureid);
 
-    glEnableVertexAttribArray(m_attriblocation);
-
     glUseProgram(m_programhandle);
 
     glBlendFunc(GL_SRC_ALPHA, GL_ONE_MINUS_SRC_ALPHA);
     glEnable(GL_BLEND);
 
 
-    glEnableVertexAttribArray(0);
-    m_attriblocation = glGetAttribLocation(m_programhandle, "position");
-    glVertexAttribPointer(m_attriblocation, 2, GL_FIXED, 0, 0, m_vertices);
-    //glVertexAttribPointer(0, 2, GL_FIXED, 0, 0, m_vertices);
+    m_attriblocation_position = glGetAttribLocation(m_programhandle, "position");
+    glEnableVertexAttribArray(m_attriblocation_position);
+    glVertexAttribPointer(m_attriblocation_position, 2, GL_FIXED, 0, 0, m_vertices);
 
-    glEnableVertexAttribArray(1);
-    m_attriblocation = glGetAttribLocation(m_programhandle, "inputtexcoord");
-    glVertexAttribPointer(m_attriblocation, 2, GL_FLOAT, 0, 0, m_texcoords);
-    //glVertexAttribPointer(1, 2, GL_FLOAT, 0, 0, m_texcoords);
+    m_attriblocation_inputtexcoord = glGetAttribLocation(m_programhandle, "inputtexcoord");
+    glEnableVertexAttribArray(m_attriblocation_inputtexcoord);
+    glVertexAttribPointer(m_attriblocation_inputtexcoord, 2, GL_FLOAT, 0, 0, m_texcoords);
 
     glDrawArrays(GL_TRIANGLE_FAN, 0, 4);
     m_drawcount++;
+
+    glDisableVertexAttribArray(m_attriblocation_position);
+    glDisableVertexAttribArray(m_attriblocation_inputtexcoord);
 }

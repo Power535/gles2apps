@@ -9,7 +9,7 @@
 #include <GLES2/gl2.h>
 #include <GLES2/gl2ext.h>
 
-#include <gles2util.h>
+#include "gles2util.h"
 
 static const char* const TextvertShader =                               "\n\
                                                                         \n\
@@ -184,8 +184,11 @@ struct atlas
 };
 
 atlas* a48;
+
+#if 0
 atlas* a24;
 atlas* a12;
+#endif
 
 int init_resources()
 {
@@ -204,6 +207,8 @@ int init_resources()
     program = create_program(TextvertShader, TextfragShader);
     if (program == 0)
         return 0;
+
+    glBindAttribLocation(program, 0, "coord");
 
     attribute_coord = glGetAttribLocation(program, "coord");
     uniform_tex = glGetUniformLocation(program, "tex");
@@ -270,7 +275,6 @@ void render_text(float x, float y, const char* s, ...)
     /* Set up the VBO for our vertex data */
     glEnableVertexAttribArray(attribute_coord);
     glBindBuffer(GL_ARRAY_BUFFER, vbo);
-
 
     glVertexAttribPointer(attribute_coord, 4, GL_FLOAT, GL_FALSE, 0, 0);
 

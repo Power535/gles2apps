@@ -5,6 +5,17 @@
 #include <EGL/egl.h>
 #include <GLES2/gl2.h>
 
+#ifdef __i386__
+#include "libgdl.h"
+#endif
+
+#ifdef __mips__
+#include <refsw/nexus_config.h>
+#include <refsw/nexus_platform.h>
+#include <refsw/nexus_display.h>
+#include <refsw/nexus_core_utils.h>
+#include <refsw/default_nexus.h>
+#endif
 
 #define EGLCHECK(x)                                         \
    do {                                                     \
@@ -30,6 +41,161 @@ typedef struct fbdev_window
 } fbdev_window;
 #endif
 
+
+
+#ifdef __mips__
+
+static unsigned int gs_screen_wdt = 1280;
+static unsigned int gs_screen_hgt = 720;
+
+static NEXUS_DisplayHandle  gs_nexus_display = 0;
+static void* gs_native_window = 0;
+
+static NXPL_PlatformHandle  nxpl_handle = 0;
+
+#if NEXUS_NUM_HDMI_OUTPUTS && !NEXUS_DTV_PLATFORM
+
+static void hotplug_callback(void *pParam, int iParam)
+{
+   NEXUS_HdmiOutputStatus status;
+   NEXUS_HdmiOutputHandle hdmi = (NEXUS_HdmiOutputHandle)pParam;
+   NEXUS_DisplayHandle display = (NEXUS_DisplayHandle)iParam;
+
+   NEXUS_HdmiOutput_GetStatus(hdmi, &status);
+
+   printf("HDMI hotplug event: %s\n", status.connected?"connected":"not connected");
+
+   /* the app can choose to switch to the preferred format, but it's not required. */
+   if (status.connected)
+   {
+      NEXUS_DisplaySettings displaySettings;
+      NEXUS_Display_GetSettings(display, &displaySettings);
+
+      printf("Switching to preferred format %d\n", status.preferredVideoFormat);
+
+      displaySettings.format = status.preferredVideoFormat;
+      NEXUS_Display_SetSettings(display, &displaySettings);
+   }
+}
+
+#endif
+
+void InitHDMIOutput(NEXUS_DisplayHandle display)
+{
+
+#if NEXUS_NUM_HDMI_OUTPUTS && !NEXUS_DTV_PLATFORM
+
+   NEXUS_HdmiOutputSettings      hdmiSettings;
+   NEXUS_PlatformConfiguration   platform_config;
+
+   NEXUS_Platform_GetConfiguration(&platform_config);
+
+   if (platform_config.outputs.hdmi[0])
+   {
+      NEXUS_Display_AddOutput(display, NEXUS_HdmiOutput_GetVideoConnector(platform_config.outputs.hdmi[0]));
+
+      /* Install hotplug callback -- video only for now */
+      NEXUS_HdmiOutput_GetSettings(platform_config.outputs.hdmi[0], &hdmiSettings);
+
+      hdmiSettings.hotplugCallback.callback = hotplug_callback;
+      hdmiSettings.hotplugCallback.context = platform_config.outputs.hdmi[0];
+      hdmiSettings.hotplugCallback.param = (int)display;
+
+      NEXUS_HdmiOutput_SetSettings(platform_config.outputs.hdmi[0], &hdmiSettings);
+
+      /* Force a hotplug to switch to a supported format if necessary */
+      hotplug_callback(platform_config.outputs.hdmi[0], (int)display);
+   }
+
+#else
+
+   UNUSED(display);
+
+#endif
+
+}
+
+bool InitPlatform ( void )
+{
+   bool succeeded = true;
+   NEXUS_Error err;
+
+   NEXUS_PlatformSettings platform_settings;
+
+   /* Initialise the Nexus platform */
+   NEXUS_Platform_GetDefaultSettings(&platform_settings);
+   platform_settings.openFrontend = false;
+
+   /* Initialise the Nexus platform */
+   err = NEXUS_Platform_Init(&platform_settings);
+
+   if (err)
+   {
+      printf("Err: NEXUS_Platform_Init() failed\n");
+      succeeded = false;
+   }
+   else
+   {
+      NEXUS_DisplayHandle    display = NULL;
+      NEXUS_DisplaySettings  display_settings;
+
+      NEXUS_Display_GetDefaultSettings(&display_settings);
+
+      display = NEXUS_Display_Open(0, &display_settings);
+
+      if (display == NULL)
+      {
+         printf("Err: NEXUS_Display_Open() failed\n");
+         succeeded = false;
+      }
+      else
+      {
+          NEXUS_VideoFormatInfo   video_format_info;
+          NEXUS_GraphicsSettings  graphics_settings;
+          NEXUS_Display_GetGraphicsSettings(display, &graphics_settings);
+
+          graphics_settings.horizontalFilter = NEXUS_GraphicsFilterCoeffs_eBilinear;
+          graphics_settings.verticalFilter = NEXUS_GraphicsFilterCoeffs_eBilinear;
+
+          NEXUS_Display_SetGraphicsSettings(display, &graphics_settings);
+ 
+          InitHDMIOutput(display);
+
+          NEXUS_Display_GetSettings(display, &display_settings);
+          NEXUS_VideoFormat_GetInfo(display_settings.format, &video_format_info);
+
+          gs_nexus_display = display;
+          gs_screen_wdt = video_format_info.width;
+          gs_screen_hgt = video_format_info.height;
+
+          printf("Screen width %d, Screen height %d\n", gs_screen_wdt, gs_screen_hgt);
+      }
+   }
+
+   if (succeeded == true)
+   {
+       NXPL_RegisterNexusDisplayPlatform ( &nxpl_handle, gs_nexus_display );
+   } 
+    
+   return succeeded;
+}
+
+
+void DeInitPlatform ( void )
+{
+    NXPL_DestroyNativeWindow(gs_native_window);
+
+    if ( gs_nexus_display != 0 )
+    {
+    	NXPL_UnregisterNexusDisplayPlatform ( nxpl_handle );
+        //NEXUS_SurfaceClient_Release ( gs_native_window );
+    }
+    NEXUS_Platform_Uninit ();
+}
+
+
+#endif
+
 static fbdev_window window;
 
 EGLDisplay          display;
@@ -38,14 +204,92 @@ EGLSurface          surface;
 EGLContext          context;
 
 
+#ifdef __i386__
+static int  _eglInit(gdl_plane_id_t plane);
+#else
 static int  _eglInit(void);
-static int  _eglExit(void);
+#endif
 
+static int  _eglExit(void);
 static void _eglClearError(void);
 static int  _eglTestError(const char* text);
 
+// Plane size and position
+#define ORIGIN_X 0
+#define ORIGIN_Y 0
+#define WIDTH 1280
+#define HEIGHT 720
+#define ASPECT ((GLfloat)WIDTH / (GLfloat)HEIGHT)
 
-static int _eglInit(void)
+#ifdef __i386__
+// Initializes a plane for the graphics to be rendered to
+static gdl_ret_t setup_plane(gdl_plane_id_t plane)
+{
+    gdl_pixel_format_t pixelFormat = GDL_PF_ARGB_32;
+    gdl_color_space_t colorSpace = GDL_COLOR_SPACE_RGB;
+    gdl_rectangle_t srcRect;
+    gdl_rectangle_t dstRect;
+    gdl_ret_t rc = GDL_SUCCESS;
+
+    dstRect.origin.x = ORIGIN_X;
+    dstRect.origin.y = ORIGIN_Y;
+    dstRect.width = WIDTH;
+    dstRect.height = HEIGHT;
+
+    srcRect.origin.x = 0;
+    srcRect.origin.y = 0;
+    srcRect.width = WIDTH;
+    srcRect.height = HEIGHT;
+
+    rc = gdl_plane_reset(plane);
+    if (GDL_SUCCESS == rc)
+    {
+        rc = gdl_plane_config_begin(plane);
+    }
+
+    if (GDL_SUCCESS == rc)
+    {
+        rc = gdl_plane_set_attr(GDL_PLANE_SRC_COLOR_SPACE, &colorSpace);
+    }
+
+    if (GDL_SUCCESS == rc)
+    {
+        rc = gdl_plane_set_attr(GDL_PLANE_PIXEL_FORMAT, &pixelFormat);
+    }
+
+    if (GDL_SUCCESS == rc)
+    {
+        rc = gdl_plane_set_attr(GDL_PLANE_DST_RECT, &dstRect);
+    }
+
+    if (GDL_SUCCESS == rc)
+    {
+        rc = gdl_plane_set_attr(GDL_PLANE_SRC_RECT, &srcRect);
+    }
+
+    if (GDL_SUCCESS == rc)
+    {
+        rc = gdl_plane_config_end(GDL_FALSE);
+    }
+    else
+    {
+        gdl_plane_config_end(GDL_TRUE);
+    }
+
+    if (GDL_SUCCESS != rc)
+    {
+        fprintf(stderr,"GDL configuration failed! GDL error code is 0x%x\n", rc);
+    }
+  
+    return rc;
+}
+#endif
+
+#ifdef __i386__
+static int _eglInit(gdl_plane_id_t plane)
+#else
+static int _eglInit()
+#endif
 {
     int      iConfigs;
     EGLint   WindowWidth, WindowHeight;
@@ -61,12 +305,12 @@ static int _eglInit(void)
     EGLint   ai32ConfigAttribs[] =      {
                                         EGL_BUFFER_SIZE,        EGL_DONT_CARE,
 
-                                        EGL_SAMPLE_BUFFERS,     1,
-                                        EGL_SAMPLES,            4,
+                                        // EGL_SAMPLE_BUFFERS,     1,
+                                        // EGL_SAMPLES,            4,
 
                                         EGL_SURFACE_TYPE,       EGL_WINDOW_BIT,
 
-                                        EGL_DEPTH_SIZE,         8,
+                                        EGL_DEPTH_SIZE,         16,
 
                                         EGL_RENDERABLE_TYPE,    EGL_OPENGL_ES2_BIT,
 
@@ -77,11 +321,12 @@ static int _eglInit(void)
                                         EGL_NONE
                                         };
 
+
     printf("eglGetDisplay()\n");usleep(50 * 1000);
     display = eglGetDisplay((EGLNativeDisplayType)EGL_DEFAULT_DISPLAY);
     if (!_eglTestError("eglGetDisplay()")) return -1;
 
-    printf("eglInitialize()\n");usleep(50 * 1000);
+	printf("eglInitialize()\n");usleep(50 * 1000);
     eglInitialize(display, &iMajorVersion, &iMinorVersion);
     if (!_eglTestError("eglInitialize()")) return -1;
 
@@ -97,11 +342,39 @@ static int _eglInit(void)
     if (strstr(eglQueryString(display, EGL_VENDOR), "ARM")) {
         window.width = 1280;
         window.height = 720;
-        surface = eglCreateWindowSurface(display, config, (EGLNativeWindowType) &window, NULL);
+        surface = eglCreateWindowSurface(display, config, (EGLNativeWindowType)&window, NULL);
+        printf("Arm\n");
     }
+#ifdef __i386__
+     else if (strstr(eglQueryString(display, EGL_VENDOR), "Intel")) {
+        printf("Intel\n");
+        surface = eglCreateWindowSurface(display, config, (NativeWindowType)plane, NULL);
+    }
+#endif
+
+#ifdef __mips__
+
+     else if (strstr(eglQueryString(display, EGL_VENDOR), "Broadcom")) {
+
+           NXPL_NativeWindowInfo win_info;
+
+           win_info.x        = 0; 
+           win_info.y        = 0;
+           win_info.width    = gs_screen_wdt;
+           win_info.height   = gs_screen_hgt;
+           win_info.stretch  = true;
+           win_info.clientID = 0; //FIXME hardcoding
+
+           gs_native_window = NXPL_CreateNativeWindow ( &win_info );
+
+           surface = eglCreateWindowSurface(display, config, gs_native_window, NULL);
+    }
+#endif
     else {
         surface = eglCreateWindowSurface(display, config, 0, NULL);
+        printf("Other\n");
     }
+
     if (!_eglTestError("eglCreateWindowSurface()")) return -1;
 
     printf("eglCreateContext()\n");usleep(50 * 1000);
@@ -141,7 +414,7 @@ static int _eglExit(void)
     eglMakeCurrent(display, EGL_NO_SURFACE, EGL_NO_SURFACE, EGL_NO_CONTEXT);
     _eglTestError("eglMakeCurrent(eglDisplay, EGL_NO_SURFACE, EGL_NO_SURFACE, EGL_NO_CONTEXT)...");
 
-#if 0
+#if 1
     printf("eglDestroyContext()\n");usleep(50 * 1000);
     eglDestroyContext(display, context);
     _eglTestError("eglDestroyContext()");
@@ -151,7 +424,7 @@ static int _eglExit(void)
     eglDestroySurface(display, surface);
     _eglTestError("eglDestroySurface()");
 
-#if 0
+#if 1
     printf("eglTerminate()\n");usleep(50 * 1000);
     eglTerminate(display);
     _eglTestError("eglTerminate()");
@@ -179,45 +452,63 @@ static int _eglTestError(const char* text)
 
 int main(int argc, char **argv)
 {
+#ifdef __i386__
+    gdl_plane_id_t plane = GDL_PLANE_ID_UPP_C;
+
+    gdl_init(0);
+
+    setup_plane(plane);
+
+    _eglInit(plane);
+
+#else
+
+    #ifdef __mips__
+
+    InitPlatform();
+
+    #endif
+
     _eglInit();
+#endif
 
     eglSwapInterval(display, 1);
 
     glViewport(0, 0, 1280, 720);
 
     glClearColor(1, 0, 0, 1);
-    glClear(GL_COLOR_BUFFER_BIT);
+    glClear(GL_COLOR_BUFFER_BIT | GL_DEPTH_BUFFER_BIT);
     printf("eglSwapBuffers\n");usleep(50 * 1000);
     eglSwapBuffers(display, surface);
     usleep(500 * 1000);
 
     glClearColor(1, 1, 1, 1);
-    glClear(GL_COLOR_BUFFER_BIT);
+    glClear(GL_COLOR_BUFFER_BIT | GL_DEPTH_BUFFER_BIT);
     printf("eglSwapBuffers\n");usleep(50 * 1000);
     eglSwapBuffers(display, surface);
     usleep(500 * 1000);
 
     glClearColor(0, 0, 1, 1);
-    glClear(GL_COLOR_BUFFER_BIT);
+    glClear(GL_COLOR_BUFFER_BIT | GL_DEPTH_BUFFER_BIT);
     printf("eglSwapBuffers\n");usleep(50 * 1000);
     eglSwapBuffers(display, surface);
     usleep(500 * 1000);
 
 
     glClearColor(1, 0, 0, 1);
-    glClear(GL_COLOR_BUFFER_BIT);
+    glClear(GL_COLOR_BUFFER_BIT | GL_DEPTH_BUFFER_BIT);
     printf("eglSwapBuffers\n");usleep(50 * 1000);
     eglSwapBuffers(display, surface);
     usleep(500 * 1000);
 
     glClearColor(1, 1, 1, 1);
-    glClear(GL_COLOR_BUFFER_BIT);
+    glClear(GL_COLOR_BUFFER_BIT | GL_DEPTH_BUFFER_BIT);
     printf("eglSwapBuffers\n");usleep(50 * 1000);
     eglSwapBuffers(display, surface);
     usleep(500 * 1000);
 
     glClearColor(0, 0, 1, 1);
-    glClear(GL_COLOR_BUFFER_BIT);
+    glClear(GL_COLOR_BUFFER_BIT | GL_DEPTH_BUFFER_BIT);
     printf("eglSwapBuffers\n");usleep(50 * 1000);
     eglSwapBuffers(display, surface);
     usleep(500 * 1000);
@@ -225,5 +516,16 @@ int main(int argc, char **argv)
     _eglExit();
 
     usleep(100 * 1000);
+
+#ifdef __i386__
+    gdl_close();
+#endif
+
+#ifdef __mips__
+	DeInitPlatform();
+#endif
+
+    usleep(100 * 1000);
+
     return 0;
 }
