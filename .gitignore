@@ -1,4 +1,3 @@
-kefile
 /config.status
 /config.log
 /config.h
@@ -25,4 +24,14 @@ libtool
 *.gcda
 app.info
 coverage_report
-
+/Makefile
+gles2app1/src/Makefile
+gles2app2/src/Makefile
+gles2app3/src/Makefile
+stamp-h1
+autom4te.cache/
+gles2app1/src/gles2app1
+gles2app1/src/gles2app2
+gles2app1/src/gles2app3
+gles2app2/src/gles2app2
+gles2app3/src/gles2app3

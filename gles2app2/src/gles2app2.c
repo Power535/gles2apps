@@ -928,10 +928,11 @@ static int init(EGLDisplay display, int argc, char **argv)
     if (argc > 1) {
 
         FILE *fs;
+        size_t result;
         fs = fopen(argv[1], "r");
         lpTex = texdata;
         if (fs) {
-            fread(lpTex, 1, 1280 * 720 * 2, fs);
+            result = fread(lpTex, 1, 1280 * 720 * 2, fs);
             fclose(fs);
         }
     }
