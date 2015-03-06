@@ -19,6 +19,70 @@ extern void* gs_native_window;
 
 #endif
 
+#ifdef __arm__
+#include <bcm_host.h>
+#endif
+
+
+#ifdef __arm__
+
+DISPMANX_DISPLAY_HANDLE_T dispman_display = 0;
+
+static EGLNativeWindowType createDispmanxLayer(void)
+{
+    VC_RECT_T dst_rect;
+    dst_rect.x = 0;
+    dst_rect.y = 0;
+    dst_rect.width = 1280;
+    dst_rect.height = 720;
+
+    VC_RECT_T src_rect;
+    src_rect.x = 0;
+    src_rect.y = 0;
+    src_rect.width = 1280 << 16;
+    src_rect.height = 720 << 16;
+
+    DISPMANX_UPDATE_HANDLE_T dispman_update = vc_dispmanx_update_start(0);
+
+    VC_DISPMANX_ALPHA_T alpha;
+    alpha.flags = DISPMANX_FLAGS_ALPHA_FROM_SOURCE;
+    alpha.opacity = 0xFF;
+    alpha.mask = 0;
+
+    DISPMANX_ELEMENT_HANDLE_T dispman_element = vc_dispmanx_element_add(
+            dispman_update, dispman_display, 1, &dst_rect, 0, &src_rect,
+            DISPMANX_PROTECTION_NONE, &alpha, (DISPMANX_CLAMP_T *)NULL, (DISPMANX_TRANSFORM_T)0);
+
+    vc_dispmanx_update_submit_sync(dispman_update);
+
+    EGL_DISPMANX_WINDOW_T *eglWindow = (EGL_DISPMANX_WINDOW_T*)malloc(sizeof(EGL_DISPMANX_WINDOW_T));
+    eglWindow->element = dispman_element;
+    eglWindow->width = 1280;
+    eglWindow->height = 720;
+
+    return eglWindow;
+}
+
+// these constants are not in any headers (yet)
+#define ELEMENT_CHANGE_LAYER          (1<<0)
+#define ELEMENT_CHANGE_OPACITY        (1<<1)
+#define ELEMENT_CHANGE_DEST_RECT      (1<<2)
+#define ELEMENT_CHANGE_SRC_RECT       (1<<3)
+#define ELEMENT_CHANGE_MASK_RESOURCE  (1<<4)
+#define ELEMENT_CHANGE_TRANSFORM      (1<<5)
+
+
+static void destroyDispmanxLayer(EGLNativeWindowType window)
+{
+    EGL_DISPMANX_WINDOW_T *eglWindow = (EGL_DISPMANX_WINDOW_T *)(window);
+    DISPMANX_UPDATE_HANDLE_T dispman_update = vc_dispmanx_update_start(0);
+    vc_dispmanx_element_remove(dispman_update, eglWindow->element);
+    vc_dispmanx_update_submit_sync(dispman_update);
+    free(eglWindow);
+}
+
+#endif
+
 static const char* const error_strings [] =
 {
     "EGL_SUCCESS",
@@ -123,6 +187,15 @@ void egl_init(EGLDisplay* pdisplay, EGLSurface* psurface, EGLContext* pcontext, 
         surface = eglCreateWindowSurface(display, configs[0], gs_native_window, NULL);
     }
 #endif
+
+#ifdef __arm__
+
+     else if (strstr(eglQueryString(display, EGL_VENDOR), "Broadcom")) {
+
+           surface = eglCreateWindowSurface(display, configs[0], createDispmanxLayer(), NULL);
+    }
+#endif
+
     else {
         surface = eglCreateWindowSurface(display, configs[0], 0, NULL);
     }

@@ -19,6 +19,10 @@
 #include <refsw/default_nexus.h>
 #endif
 
+#ifdef __arm__
+#include <bcm_host.h>
+#endif
+
 #include <GLES2/gl2.h>
 #include <GLES2/gl2ext.h>
 #include <EGL/egl.h>
@@ -285,6 +289,10 @@ void DeInitPlatform ( void )
 #endif
 
 
+
+
+extern DISPMANX_DISPLAY_HANDLE_T dispman_display;
+
 int main(int argc, char *argv[])
 {
     int i, x, y;
@@ -308,6 +316,14 @@ int main(int argc, char *argv[])
 #ifdef __mips__
 
 	InitPlatform();
+
+#endif
+
+#ifdef __arm__
+
+    bcm_host_init();
+
+    dispman_display = vc_dispmanx_display_open(0/* LCD */);
 
 #endif
 
@@ -422,6 +438,10 @@ int main(int argc, char *argv[])
 
 	DeInitPlatform();
 
+#endif
+
+#ifdef __arm__
+    // destroyDispmanxLayer(window);
 #endif
 
     return 0;
