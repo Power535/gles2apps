@@ -20,6 +20,7 @@
 #endif
 
 #ifdef __arm__
+extern DISPMANX_DISPLAY_HANDLE_T dispman_display;
 #include <bcm_host.h>
 #endif
 
@@ -289,21 +290,65 @@ void DeInitPlatform ( void )
 #endif
 
 
+typedef struct
+{
+   	int      textureWidth;
+   	int      textureHeight;
+   	int      nTextures;
+} Config;
 
+bool processArgs(int argc, char *argv[], Config *config)
+{
+   	int   a;
 
-extern DISPMANX_DISPLAY_HANDLE_T dispman_display;
+   	config->textureWidth	= 640;
+   	config->textureHeight   = 480;
+   	config->nTextures       = 100;
+
+   	if (config == NULL)
+      	return false;
+
+	for (a = 1; a < argc; ++a) {
+      	char  *arg = argv[a];
+
+      	// if (strcmp(arg, "+m") == 0)
+      	//    config->useMultisample = true;
+      	if (strncmp(arg, "d=", 2) == 0) {
+         	if (sscanf(arg, "d=%dx%d", &config->textureWidth, &config->textureHeight) != 2)
+            	return false;
+      	} else if (strncmp(arg, "n=", 2) == 0) {
+         	if (sscanf(arg, "n=%d", &config->nTextures) != 1)
+            	return false;
+      	} else {
+         	return false;
+		}
+	}
+
+   	return true;
+}
+
+Config            config;
+
 
 int main(int argc, char *argv[])
 {
     int i, x, y;
 
 #ifdef __i386__
-	gdl_plane_id_t plane = GDL_PLANE_ID_UPP_C;
+    gdl_plane_id_t plane = GDL_PLANE_ID_UPP_C;
 #endif
 
     EGLDisplay display;
     EGLSurface surface;
     EGLContext context;
+
+
+   	if (!processArgs(argc, argv, &config)) {
+      	const char  *progname = argc > 0 ? argv[0] : "";
+      	fprintf(stderr, "Usage: %s [d=WxH] [n=#textures]\n", progname);
+      	return 0;
+   	}
+
 
 #ifdef __i386
     gdl_init(0);
@@ -315,7 +360,7 @@ int main(int argc, char *argv[])
 
 #ifdef __mips__
 
-	InitPlatform();
+    InitPlatform();
 
 #endif
 
@@ -334,16 +379,25 @@ int main(int argc, char *argv[])
     signal(SIGTERM, &signal_handler);
     signal(SIGHUP, &signal_handler);
 
-    #define W 10
-    #define H 10
 
-    Texture textures[ W * H ];
+    //Texture textures[ W * H ];
 
-    for (x = 0; x < W; x++) {
+    int rows = ceil(sqrt(config.nTextures));
+    int columns = ceil(1.0 * config.nTextures / rows);
 
-        for (y = 0; y < H; y++) {
+    Texture* textures = new Texture[rows*columns];
 
-            textures[y * W + x].Create((1.0 * x) / W, (1.0 * y) / H, 1.0 / W, 1.0 / H, 640, 480, argv[1]);
+
+    for (x = 0; x < columns; x++) {
+
+        for (y = 0; y < rows; y++) {
+
+            textures[y * columns + x].Create((1.0 * x) / columns, (1.0 * y) / rows, 1.0 / columns, 1.0 / rows, 
+            
+            config.textureWidth,
+            config.textureHeight,
+            
+            0);
         }
     }
 
@@ -364,8 +418,8 @@ int main(int argc, char *argv[])
     int count = 0;
 
     if (init_resources() == 0) {
-		goto bail;
-	}
+        goto bail;
+    }
 
     glClearColor(0.5, 0.0, 0.0, 1.0);
 
@@ -376,16 +430,16 @@ int main(int argc, char *argv[])
 
         glClear(GL_COLOR_BUFFER_BIT);
 
-		// draw odd textures
-        for (i = 0; i < (W * H) ; i++) {
+        // draw odd textures
+        for (i = 0; i < (rows * columns) ; i++) {
 
-			if (i & 1) textures[i].Draw();
+            if (i & 1) textures[i].Draw();
         }
 
-		// draw even textures
-        for (i = 0; i < (W * H) ; i++) {
+        // draw even textures
+        for (i = 0; i < (rows * columns) ; i++) {
 
-			if (!(i & 1)) textures[i].Draw();
+            if (!(i & 1)) textures[i].Draw();
         }
 
 
@@ -426,17 +480,17 @@ int main(int argc, char *argv[])
 
     }
 
-	bail:
+    bail:
 
     egl_exit(display, surface, context);
 
 #ifdef __i386__
-	gdl_close();
+    gdl_close();
 #endif
 
 #ifdef __mips__
 
-	DeInitPlatform();
+    DeInitPlatform();
 
 #endif
 

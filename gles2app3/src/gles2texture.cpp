@@ -31,6 +31,9 @@ int read_png_file(char* file_name, char** ppbytes, int* width, int* height)
     char            header[8];
 
 
+	if (!file_name)
+		return -1;
+
     FILE *fp = fopen(file_name, "rb");
     if (!fp) {
         printf("[read_png_file] File %s could not be opened for reading\n", file_name);
