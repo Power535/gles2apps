@@ -119,25 +119,27 @@ static NXPL_PlatformHandle  nxpl_handle = 0;
 
 static void hotplug_callback(void *pParam, int iParam)
 {
-   NEXUS_HdmiOutputStatus status;
-   NEXUS_HdmiOutputHandle hdmi = (NEXUS_HdmiOutputHandle)pParam;
-   NEXUS_DisplayHandle display = (NEXUS_DisplayHandle)iParam;
+    NEXUS_HdmiOutputStatus status;
+    NEXUS_HdmiOutputHandle hdmi = (NEXUS_HdmiOutputHandle)pParam;
+    NEXUS_DisplayHandle display = (NEXUS_DisplayHandle)iParam;
 
-   NEXUS_HdmiOutput_GetStatus(hdmi, &status);
+    NEXUS_HdmiOutput_GetStatus(hdmi, &status);
 
-   printf("HDMI hotplug event: %s\n", status.connected?"connected":"not connected");
+    printf("HDMI hotplug event: %s\n", status.connected?"connected":"not connected");
 
-   /* the app can choose to switch to the preferred format, but it's not required. */
-   if (status.connected)
-   {
-      NEXUS_DisplaySettings displaySettings;
-      NEXUS_Display_GetSettings(display, &displaySettings);
+    /* the app can choose to switch to the preferred format, but it's not required. */
+    if (status.connected)
+    {
+        NEXUS_DisplaySettings displaySettings;
+        NEXUS_Display_GetSettings(display, &displaySettings);
 
-      printf("Switching to preferred format %d\n", status.preferredVideoFormat);
-
-      displaySettings.format = status.preferredVideoFormat;
-      NEXUS_Display_SetSettings(display, &displaySettings);
-   }
+        if (!status.videoFormatSupported[displaySettings.format])
+        {
+            fprintf(stderr, "\nCurrent format not supported by attached monitor. Switching to preferred format %d\n", status.preferredVideoFormat);
+            displaySettings.format = status.preferredVideoFormat;
+            NEXUS_Display_SetSettings(display, &displaySettings);
+        }
+    }
 }
 
 #endif
@@ -147,27 +149,27 @@ void InitHDMIOutput(NEXUS_DisplayHandle display)
 
 #if NEXUS_NUM_HDMI_OUTPUTS && !NEXUS_DTV_PLATFORM
 
-   NEXUS_HdmiOutputSettings      hdmiSettings;
-   NEXUS_PlatformConfiguration   platform_config;
+    NEXUS_HdmiOutputSettings      hdmiSettings;
+    NEXUS_PlatformConfiguration   platform_config;
 
-   NEXUS_Platform_GetConfiguration(&platform_config);
+    NEXUS_Platform_GetConfiguration(&platform_config);
 
-   if (platform_config.outputs.hdmi[0])
-   {
-      NEXUS_Display_AddOutput(display, NEXUS_HdmiOutput_GetVideoConnector(platform_config.outputs.hdmi[0]));
+    if (platform_config.outputs.hdmi[0])
+    {
+         NEXUS_Display_AddOutput(display, NEXUS_HdmiOutput_GetVideoConnector(platform_config.outputs.hdmi[0]));
 
-      /* Install hotplug callback -- video only for now */
-      NEXUS_HdmiOutput_GetSettings(platform_config.outputs.hdmi[0], &hdmiSettings);
+        /* Install hotplug callback -- video only for now */
+        NEXUS_HdmiOutput_GetSettings(platform_config.outputs.hdmi[0], &hdmiSettings);
 
-      hdmiSettings.hotplugCallback.callback = hotplug_callback;
-      hdmiSettings.hotplugCallback.context = platform_config.outputs.hdmi[0];
-      hdmiSettings.hotplugCallback.param = (int)display;
+        hdmiSettings.hotplugCallback.callback = hotplug_callback;
+        hdmiSettings.hotplugCallback.context = platform_config.outputs.hdmi[0];
+        hdmiSettings.hotplugCallback.param = (int)display;
 
-      NEXUS_HdmiOutput_SetSettings(platform_config.outputs.hdmi[0], &hdmiSettings);
+        NEXUS_HdmiOutput_SetSettings(platform_config.outputs.hdmi[0], &hdmiSettings);
 
-      /* Force a hotplug to switch to a supported format if necessary */
-      hotplug_callback(platform_config.outputs.hdmi[0], (int)display);
-   }
+        /* Force a hotplug to switch to a supported format if necessary */
+        hotplug_callback(platform_config.outputs.hdmi[0], (int)display);
+    }
 
 #else
 
@@ -179,67 +181,73 @@ void InitHDMIOutput(NEXUS_DisplayHandle display)
 
 bool InitPlatform ( void )
 {
-   bool succeeded = true;
-   NEXUS_Error err;
+    bool succeeded = true;
+    NEXUS_Error err;
 
-   NEXUS_PlatformSettings platform_settings;
+    NEXUS_PlatformSettings platform_settings;
 
-   /* Initialise the Nexus platform */
-   NEXUS_Platform_GetDefaultSettings(&platform_settings);
-   platform_settings.openFrontend = false;
+    /* Initialise the Nexus platform */
+    NEXUS_Platform_GetDefaultSettings(&platform_settings);
+    platform_settings.openFrontend = false;
 
-   /* Initialise the Nexus platform */
-   err = NEXUS_Platform_Init(&platform_settings);
+    /* Initialise the Nexus platform */
+    err = NEXUS_Platform_Init(&platform_settings);
 
-   if (err)
-   {
-      printf("Err: NEXUS_Platform_Init() failed\n");
-      succeeded = false;
-   }
-   else
-   {
-      NEXUS_DisplayHandle    display = NULL;
-      NEXUS_DisplaySettings  display_settings;
+    if (err)
+    {
+        printf("Err: NEXUS_Platform_Init() failed\n");
+        succeeded = false;
+    }
+    else
+    {
+        NEXUS_DisplayHandle    display = NULL;
+        NEXUS_DisplaySettings  display_settings;
 
-      NEXUS_Display_GetDefaultSettings(&display_settings);
+        NEXUS_Display_GetDefaultSettings(&display_settings);
 
-      display = NEXUS_Display_Open(0, &display_settings);
+        display_settings.format = NEXUS_VideoFormat_e720p;
 
-      if (display == NULL)
-      {
-         printf("Err: NEXUS_Display_Open() failed\n");
-         succeeded = false;
-      }
-      else
-      {
-          NEXUS_VideoFormatInfo   video_format_info;
-          NEXUS_GraphicsSettings  graphics_settings;
-          NEXUS_Display_GetGraphicsSettings(display, &graphics_settings);
+        display = NEXUS_Display_Open(0, &display_settings);
 
-          graphics_settings.horizontalFilter = NEXUS_GraphicsFilterCoeffs_eBilinear;
-          graphics_settings.verticalFilter = NEXUS_GraphicsFilterCoeffs_eBilinear;
+        if (display == NULL)
+        {
+            printf("Err: NEXUS_Display_Open() failed\n");
+            succeeded = false;
+        }
+        else
+        {
+            NEXUS_VideoFormatInfo   video_format_info;
+            NEXUS_GraphicsSettings  graphics_settings;
+            NEXUS_Display_GetGraphicsSettings(display, &graphics_settings);
 
-          NEXUS_Display_SetGraphicsSettings(display, &graphics_settings);
- 
-          InitHDMIOutput(display);
+            graphics_settings.horizontalFilter = NEXUS_GraphicsFilterCoeffs_eBilinear;
+            graphics_settings.verticalFilter = NEXUS_GraphicsFilterCoeffs_eBilinear;
 
-          NEXUS_Display_GetSettings(display, &display_settings);
-          NEXUS_VideoFormat_GetInfo(display_settings.format, &video_format_info);
+            /* Disable blend with video plane */
+            graphics_settings.sourceBlendFactor = NEXUS_CompositorBlendFactor_eOne;
+            graphics_settings.destBlendFactor   = NEXUS_CompositorBlendFactor_eZero;
 
-          gs_nexus_display = display;
-          gs_screen_wdt = video_format_info.width;
-          gs_screen_hgt = video_format_info.height;
+            NEXUS_Display_SetGraphicsSettings(display, &graphics_settings);
 
-          printf("Screen width %d, Screen height %d\n", gs_screen_wdt, gs_screen_hgt);
-      }
-   }
+            InitHDMIOutput(display);
 
-   if (succeeded == true)
-   {
-       NXPL_RegisterNexusDisplayPlatform ( &nxpl_handle, gs_nexus_display );
-   } 
-    
-   return succeeded;
+            NEXUS_Display_GetSettings(display, &display_settings);
+            NEXUS_VideoFormat_GetInfo(display_settings.format, &video_format_info);
+
+            gs_nexus_display = display;
+            gs_screen_wdt = video_format_info.width;
+            gs_screen_hgt = video_format_info.height;
+
+            printf("Screen width %d, Screen height %d\n", gs_screen_wdt, gs_screen_hgt);
+        }
+    }
+
+    if (succeeded == true)
+    {
+        NXPL_RegisterNexusDisplayPlatform ( &nxpl_handle, gs_nexus_display );
+    }
+
+    return succeeded;
 }
 
 
@@ -249,7 +257,7 @@ void DeInitPlatform ( void )
 
     if ( gs_nexus_display != 0 )
     {
-    	NXPL_UnregisterNexusDisplayPlatform ( nxpl_handle );
+        NXPL_UnregisterNexusDisplayPlatform ( nxpl_handle );
         //NEXUS_SurfaceClient_Release ( gs_native_window );
     }
     NEXUS_Platform_Uninit ();
@@ -342,7 +350,7 @@ static gdl_ret_t setup_plane(gdl_plane_id_t plane)
     {
         fprintf(stderr,"GDL configuration failed! GDL error code is 0x%x\n", rc);
     }
-  
+
     return rc;
 }
 #endif
@@ -388,7 +396,7 @@ static int _eglInit()
     display = eglGetDisplay((EGLNativeDisplayType)EGL_DEFAULT_DISPLAY);
     if (!_eglTestError("eglGetDisplay()")) return -1;
 
-	printf("eglInitialize()\n");usleep(50 * 1000);
+    printf("eglInitialize()\n");usleep(50 * 1000);
     eglInitialize(display, &iMajorVersion, &iMinorVersion);
     if (!_eglTestError("eglInitialize()")) return -1;
 
@@ -420,7 +428,7 @@ static int _eglInit()
 
            NXPL_NativeWindowInfo win_info;
 
-           win_info.x        = 0; 
+           win_info.x        = 0;
            win_info.y        = 0;
            win_info.width    = gs_screen_wdt;
            win_info.height   = gs_screen_hgt;
@@ -602,7 +610,7 @@ int main(int argc, char **argv)
 #endif
 
 #ifdef __mips__
-	DeInitPlatform();
+    DeInitPlatform();
 #endif
 
 

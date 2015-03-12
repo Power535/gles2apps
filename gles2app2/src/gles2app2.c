@@ -30,8 +30,8 @@
 
 #ifdef __mips__
 
-static unsigned int gs_screen_wdt = 1920;
-static unsigned int gs_screen_hgt = 1080;
+static unsigned int gs_screen_wdt = 1280;
+static unsigned int gs_screen_hgt = 720;
 
 static NEXUS_DisplayHandle  gs_nexus_display = 0;
 static void* gs_native_window = 0;
@@ -56,10 +56,12 @@ static void hotplug_callback(void *pParam, int iParam)
         NEXUS_DisplaySettings displaySettings;
         NEXUS_Display_GetSettings(display, &displaySettings);
 
-        printf("Switching to preferred format %d\n", status.preferredVideoFormat);
-
-        displaySettings.format = status.preferredVideoFormat;
-        NEXUS_Display_SetSettings(display, &displaySettings);
+        if (!status.videoFormatSupported[displaySettings.format])
+        {
+            fprintf(stderr, "\nCurrent format not supported by attached monitor. Switching to preferred format %d\n", status.preferredVideoFormat);
+            displaySettings.format = status.preferredVideoFormat;
+            NEXUS_Display_SetSettings(display, &displaySettings);
+        }
     }
 }
 
@@ -102,66 +104,73 @@ void InitHDMIOutput(NEXUS_DisplayHandle display)
 
 bool InitPlatform ( void )
 {
-   bool succeeded = true;
-   NEXUS_Error err;
+    bool succeeded = true;
+    NEXUS_Error err;
 
-   NEXUS_PlatformSettings platform_settings;
+    NEXUS_PlatformSettings platform_settings;
 
-   /* Initialise the Nexus platform */
-   NEXUS_Platform_GetDefaultSettings(&platform_settings);
-   platform_settings.openFrontend = false;
+    /* Initialise the Nexus platform */
+    NEXUS_Platform_GetDefaultSettings(&platform_settings);
+    platform_settings.openFrontend = false;
 
-   /* Initialise the Nexus platform */
-   err = NEXUS_Platform_Init(&platform_settings);
+    /* Initialise the Nexus platform */
+    err = NEXUS_Platform_Init(&platform_settings);
 
-   if (err)
-   {
-      printf("Err: NEXUS_Platform_Init() failed\n");
-      succeeded = false;
-   }
-   else
-   {
-      NEXUS_DisplayHandle    display = NULL;
-      NEXUS_DisplaySettings  display_settings;
+    if (err)
+    {
+        printf("Err: NEXUS_Platform_Init() failed\n");
+        succeeded = false;
+    }
+    else
+    {
+        NEXUS_DisplayHandle    display = NULL;
+        NEXUS_DisplaySettings  display_settings;
 
-      NEXUS_Display_GetDefaultSettings(&display_settings);
+        NEXUS_Display_GetDefaultSettings(&display_settings);
 
-      display = NEXUS_Display_Open(0, &display_settings);
+        display_settings.format = NEXUS_VideoFormat_e720p;
 
-      if (display == NULL)
-      {
-         printf("Err: NEXUS_Display_Open() failed\n");
-         succeeded = false;
-      }
-      else
-      {
-          NEXUS_VideoFormatInfo   video_format_info;
-          NEXUS_GraphicsSettings  graphics_settings;
-          NEXUS_Display_GetGraphicsSettings(display, &graphics_settings);
+        display = NEXUS_Display_Open(0, &display_settings);
 
-          graphics_settings.horizontalFilter = NEXUS_GraphicsFilterCoeffs_eBilinear;
-          graphics_settings.verticalFilter = NEXUS_GraphicsFilterCoeffs_eBilinear;
-          NEXUS_Display_SetGraphicsSettings(display, &graphics_settings);
- 
-          InitHDMIOutput(display);
+        if (display == NULL)
+        {
+            printf("Err: NEXUS_Display_Open() failed\n");
+            succeeded = false;
+        }
+        else
+        {
+            NEXUS_VideoFormatInfo   video_format_info;
+            NEXUS_GraphicsSettings  graphics_settings;
+            NEXUS_Display_GetGraphicsSettings(display, &graphics_settings);
 
-          NEXUS_Display_GetSettings(display, &display_settings);
-          NEXUS_VideoFormat_GetInfo(display_settings.format, &video_format_info);
+            graphics_settings.horizontalFilter = NEXUS_GraphicsFilterCoeffs_eBilinear;
+            graphics_settings.verticalFilter = NEXUS_GraphicsFilterCoeffs_eBilinear;
+            
+            /* Disable blend with video plane */
+            graphics_settings.sourceBlendFactor = NEXUS_CompositorBlendFactor_eOne;
+            graphics_settings.destBlendFactor   = NEXUS_CompositorBlendFactor_eZero;
 
-          gs_nexus_display = display;
-          gs_screen_wdt = video_format_info.width;
-          gs_screen_hgt = video_format_info.height;
+            NEXUS_Display_SetGraphicsSettings(display, &graphics_settings);
 
-          printf("Screen width %d, Screen height %d\n", gs_screen_wdt, gs_screen_hgt);
-      }
-   }
+            InitHDMIOutput(display);
 
-   if (succeeded == true)
-   {
-       NXPL_RegisterNexusDisplayPlatform ( &nxpl_handle, gs_nexus_display );
-   } 
-    
-   return succeeded;
+            NEXUS_Display_GetSettings(display, &display_settings);
+            NEXUS_VideoFormat_GetInfo(display_settings.format, &video_format_info);
+
+            gs_nexus_display = display;
+            gs_screen_wdt = video_format_info.width;
+            gs_screen_hgt = video_format_info.height;
+
+            printf("Screen width %d, Screen height %d\n", gs_screen_wdt, gs_screen_hgt);
+        }
+    }
+
+    if (succeeded == true)
+    {
+        NXPL_RegisterNexusDisplayPlatform ( &nxpl_handle, gs_nexus_display );
+    }
+
+    return succeeded;
 }
 
 
@@ -461,7 +470,7 @@ static gdl_ret_t setup_plane(gdl_plane_id_t plane)
     {
         fprintf(stderr,"GDL configuration failed! GDL error code is 0x%x\n", rc);
     }
-  
+
     return rc;
 }
 
@@ -511,17 +520,17 @@ void egl_init(EGLDisplay* pdisplay, EGLSurface* psurface, EGLContext* pcontext, 
         window.height = height;
         surface = eglCreateWindowSurface(display, configs[0], (EGLNativeWindowType)&window, NULL);
     }
-    
+
 #ifdef __i386__
     else if (strstr(eglQueryString(display, EGL_VENDOR), "Intel")) {
         surface = eglCreateWindowSurface(display, configs[0], (NativeWindowType)plane, NULL);
     }
 #endif
-#ifdef __mips__    
+#ifdef __mips__
     else if (strstr(eglQueryString(display, EGL_VENDOR), "Broadcom")) {
         NXPL_NativeWindowInfo win_info;
 
-        win_info.x        = 0; 
+        win_info.x        = 0;
         win_info.y        = 0;
         win_info.width    = gs_screen_wdt;
         win_info.height   = gs_screen_hgt;
