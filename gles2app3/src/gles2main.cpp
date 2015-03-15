@@ -20,8 +20,8 @@
 #endif
 
 #ifdef __arm__
-extern DISPMANX_DISPLAY_HANDLE_T dispman_display;
 #include <bcm_host.h>
+extern DISPMANX_DISPLAY_HANDLE_T dispman_display;
 #endif
 
 #include <GLES2/gl2.h>
