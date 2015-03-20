@@ -57,7 +57,7 @@ FT_Face face;
 // Maximum texture width
 #define MAXWIDTH 1024
 
-const char *fontfilename = "/usr/share/fonts/ttf/Vera.ttf";
+const char *fontfilename = "/usr/share/fonts/Vera.ttf";
 
 
 /**
