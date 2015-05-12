@@ -1,5 +1,5 @@
 # Automake configuration file
-ACLOCAL_AMFLAGS = -I m4
+# ACLOCAL_AMFLAGS = -I m4
 AUTOMAKE_OPTIONS = foreign
 
 SUBDIRS = \
@@ -7,4 +7,3 @@ SUBDIRS = \
     gles2app2/src \
     gles2app3/src
 #    gles2app4/src
-

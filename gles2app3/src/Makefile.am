@@ -30,4 +30,3 @@ gles2app3_SOURCES = \
     gles2util.h \
     gles2text.cpp \
     gles2text.h
-

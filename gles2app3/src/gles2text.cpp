@@ -11,6 +11,8 @@
 
 #include "gles2util.h"
 
+#include "Vera.ttf.c"
+
 static const char* const TextvertShader =                               "\n\
                                                                         \n\
 attribute vec4 coord;                                                   \n\
@@ -56,9 +58,6 @@ FT_Face face;
 
 // Maximum texture width
 #define MAXWIDTH 1024
-
-const char *fontfilename = "/usr/share/fonts/Vera.ttf";
-
 
 /**
  * The atlas struct holds a texture that contains the visible US-ASCII characters
@@ -198,9 +197,8 @@ int init_resources()
         return 0;
     }
 
-    /* Load a font */
-    if (FT_New_Face(ft, fontfilename, 0, &face)) {
-        fprintf(stderr, "Could not open font %s\n", fontfilename);
+    if (FT_New_Memory_Face(ft, (FT_Byte*)Vera_ttf, Vera_ttf_len, 0, &face)) {
+        fprintf(stderr, "Could not load font\n");
         return 0;
     }
 
