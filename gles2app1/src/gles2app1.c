@@ -6,7 +6,7 @@
 #include <GLES2/gl2.h>
 
 #ifdef __i386__
-#include "libgdl.h"
+#include <libgdl.h>
 #endif
 
 #ifdef __mips__

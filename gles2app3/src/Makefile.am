@@ -2,10 +2,6 @@
 
 bin_PROGRAMS = gles2app3
 
-## gles2app3_texturedir = /usr/share/gles2apps/gles2app3/textures
-## gles2app3_texture_DATA = \
-##     ${srcdir}/../textures/bg-1280x720.png
-
 AM_CPPFLAGS = \
     $(egl_CFLAGS) \
     $(glesv2_CFLAGS) \
@@ -30,3 +26,8 @@ gles2app3_SOURCES = \
     gles2util.h \
     gles2text.cpp \
     gles2text.h
+
+if IS586
+AM_CPPFLAGS += $(gdl_CFLAGS)
+gles2app3_LDADD += $(gdl_LIBS)
+endif

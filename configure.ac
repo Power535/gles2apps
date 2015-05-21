@@ -6,7 +6,6 @@ AC_INIT([gles2apps], [0.1], [revogelaar@gmail.com])
 AM_INIT_AUTOMAKE([foreign])
 LT_INIT
 AC_CONFIG_SRCDIR([gles2app1/src/gles2app1.c])
-AC_CONFIG_HEADERS([config.h])
 #AC_CONFIG_MACRO_DIR([m4])
 
 # Checks for programs.
@@ -22,12 +21,29 @@ AC_PROG_RANLIB
 # Checks for libraries.
 AC_CHECK_LIB([m], [log10])
 
+case "$host" in
+  arm*-*-*)
+	TARGET=ARM;
+	;;
+  mips*-*-linux*)
+	TARGET=MIPS;
+	;;
+  i586-*-*)
+	TARGET=586;
+esac
+
 # Checks for pkg-config
 PKG_PROG_PKG_CONFIG
 PKG_CHECK_MODULES([egl], [egl], [], [AC_MSG_ERROR([Unable to find libEGL])])
 PKG_CHECK_MODULES([glesv2], [glesv2], [], [AC_MSG_ERROR([Unable to find libGLESv2])])
 PKG_CHECK_MODULES([freetype2], [freetype2], [], [AC_MSG_ERROR([Unable to find libfreetype])])
 PKG_CHECK_MODULES([libpng], [libpng >= 1.2.0], [], [AC_MSG_ERROR([Unable to find libpng])])
+
+if test x$TARGET = x586; then
+PKG_CHECK_MODULES([gdl], [gdl], [], [AC_MSG_ERROR([Unable to find libgdl])])
+fi
+
+AM_CONDITIONAL(IS586, test x$TARGET = x586)
 
 # Checks for header files.
 AC_CHECK_HEADERS([fcntl.h stdlib.h string.h sys/time.h unistd.h])

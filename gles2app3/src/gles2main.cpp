@@ -8,7 +8,7 @@
 #include <sys/time.h>
 
 #ifdef __i386__
-#include "libgdl.h"
+#include <libgdl.h>
 #endif
 
 #ifdef __mips__

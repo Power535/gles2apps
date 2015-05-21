@@ -13,3 +13,7 @@ gles2app1_LDADD = \
 gles2app1_SOURCES = \
     gles2app1.c
 
+if IS586
+AM_CPPFLAGS += $(gdl_CFLAGS)
+gles2app1_LDADD += $(gdl_LIBS)
+endif
