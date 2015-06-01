@@ -158,13 +158,10 @@ void Texture::Create(float x, float y, float width, float height, int twidth, in
             m_height = pngheight / 720.0;
         }
 
-        printf("texture = [%s], %dx%d\n", filename, twidth, theight);
     }
     else {
 
-        m_texdata = (GLubyte*) malloc (twidth * theight * 4);
-
-        printf("texture = checkerboard pattern, %dx%d\n", twidth, theight);
+        m_texdata = (GLubyte*)malloc(twidth * theight * 4);
 
         GLubyte* lpTex = m_texdata;
         for (j = 0; j < theight; j++) {
@@ -205,13 +202,13 @@ void Texture::Create(float x, float y, float width, float height, int twidth, in
 
     glBindTexture(GL_TEXTURE_2D, m_textureid);
 
-    glTexImage2D(GL_TEXTURE_2D, 0, GL_BGRA_EXT, twidth, theight, 0, GL_BGRA_EXT, GL_UNSIGNED_BYTE, m_texdata);
+    glTexImage2D(GL_TEXTURE_2D, 0, GL_BGRA_EXT, twidth, theight, 0, GL_BGRA_EXT, GL_UNSIGNED_BYTE, NULL);
+    glTexSubImage2D(GL_TEXTURE_2D, 0, 0, 0, twidth, theight, GL_BGRA_EXT, GL_UNSIGNED_BYTE, m_texdata);
 
     glTexParameterf(GL_TEXTURE_2D, GL_TEXTURE_MIN_FILTER, GL_NEAREST);
     glTexParameterf(GL_TEXTURE_2D, GL_TEXTURE_MAG_FILTER, GL_NEAREST);
     glTexParameterf(GL_TEXTURE_2D, GL_TEXTURE_WRAP_S, GL_CLAMP_TO_EDGE);
     glTexParameterf(GL_TEXTURE_2D, GL_TEXTURE_WRAP_T, GL_CLAMP_TO_EDGE);
-
 
     m_programhandle = create_program(m_vertshader, m_fragshader);
 
@@ -272,4 +269,24 @@ void Texture::Draw()
 
     glDisableVertexAttribArray(m_attriblocation_position);
     glDisableVertexAttribArray(m_attriblocation_inputtexcoord);
+
+#if 0
+    if ((m_drawcount % 50) == 0) {
+        static GLuint tid = 0;
+        static GLubyte* tdata = 0;
+        
+        if (!tid) {
+            glGenTextures(1, &tid);
+        }
+        glBindTexture(GL_TEXTURE_2D, tid);
+
+        if (!tdata) {
+            tdata = (GLubyte*)malloc(1280 * 720 * 4);
+        }
+
+        glTexImage2D(GL_TEXTURE_2D, 0, GL_BGRA_EXT, 1280, 720, 0, GL_BGRA_EXT, GL_UNSIGNED_BYTE, NULL);
+        glTexSubImage2D(GL_TEXTURE_2D, 0, 0, 0, 1280, 720, GL_BGRA_EXT, GL_UNSIGNED_BYTE, tdata);
+    }        
+#endif
+
 }

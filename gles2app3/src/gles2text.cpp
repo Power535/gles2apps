@@ -174,7 +174,7 @@ struct atlas
             ox += g->bitmap.width + 1;
         }
 
-        fprintf(stderr, "Generated a %d x %d (%d kb) texture atlas\n", w, h, w * h / 1024);
+        fprintf(stdout, "Created 1x %dx%d font atlas\n", w, h, w * h / 1024);
     }
 
     ~atlas() {

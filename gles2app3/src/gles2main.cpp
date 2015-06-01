@@ -397,9 +397,9 @@ int main(int argc, char *argv[])
     Texture* textures = new Texture[rows*columns];
 
 
-    for (x = 0; x < columns; x++) {
+    for (y = 0; y < rows; y++) {
 
-        for (y = 0; y < rows; y++) {
+        for (x = 0; x < columns; x++) {
 
             textures[y * columns + x].Create((1.0 * x) / columns, (1.0 * y) / rows, 1.0 / columns, 1.0 / rows,
 
@@ -407,9 +407,14 @@ int main(int argc, char *argv[])
             config.textureHeight,
 
             0);
+
+            fprintf(stdout, "Created %dx %dx%d checkerboard textures\r", y * columns + x + 1, config.textureWidth, config.textureHeight);
+            fflush(stdout);
+
         }
     }
 
+    fprintf(stdout, "\n");
 
     _u64 first_timestamp = timestamp_usec();
 
