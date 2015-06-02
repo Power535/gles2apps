@@ -183,13 +183,66 @@ void Texture::Create(float x, float y, float width, float height, int twidth, in
     }
 
 
-    // TRIANGLE FAN
-    m_vertices = new GLfixed [8];
+    /*
+     * glDrawArrays TRIANGLE FAN
+     *
+     *  1, 0,   bottom right corner
+     *  0, 0,   bottom left corner
+     *  0, 1,   top left corner
+     *  1, 1    top right corner
+     */
+    m_a_verts = new GLfixed [8];
 
-    m_vertices[0] = FLOAT_TO_FIXED(m_width); m_vertices[1] =  FLOAT_TO_FIXED(0.0),
-    m_vertices[2] = FLOAT_TO_FIXED(0.0);     m_vertices[3] =  FLOAT_TO_FIXED(0.0),
-    m_vertices[4] = FLOAT_TO_FIXED(0.0);     m_vertices[5] =  FLOAT_TO_FIXED(m_height),
-    m_vertices[6] = FLOAT_TO_FIXED(m_width); m_vertices[7] =  FLOAT_TO_FIXED(m_height),
+    m_a_verts[0] = FLOAT_TO_FIXED(m_width); m_a_verts[1] =  FLOAT_TO_FIXED(0.0),
+    m_a_verts[2] = FLOAT_TO_FIXED(0.0);     m_a_verts[3] =  FLOAT_TO_FIXED(0.0),
+    m_a_verts[4] = FLOAT_TO_FIXED(0.0);     m_a_verts[5] =  FLOAT_TO_FIXED(m_height),
+    m_a_verts[6] = FLOAT_TO_FIXED(m_width); m_a_verts[7] =  FLOAT_TO_FIXED(m_height),
+
+
+    /*
+     * glDrawElements TRIANGLES
+     *
+     * 0, 0,    bottom left corner
+     * 0, 1,    top left corner
+     * 1, 1,    top right corner
+     * 1, 0     bottom right corner
+     *
+     */
+
+    #if 0
+    m_e_verts = new GLfixed [12];
+
+    //m_e_verts[0] = -1; m_e_verts[1] = -1; m_e_verts[2] = 0;
+    //m_e_verts[3] = -1; m_e_verts[4] = 1; m_e_verts[5] = 0;
+    //m_e_verts[6] = 1; m_e_verts[7] = 1; m_e_verts[8] = 0;
+    //m_e_verts[9] = 1; m_e_verts[10] = -1; m_e_verts[11] = 0;
+
+    m_e_verts[0] = -FLOAT_TO_FIXED(m_width); m_e_verts[1] = -FLOAT_TO_FIXED(m_height); m_e_verts[2] = FLOAT_TO_FIXED(0.0);
+    m_e_verts[3] = -FLOAT_TO_FIXED(m_width); m_e_verts[4] = FLOAT_TO_FIXED(m_height); m_e_verts[5] = FLOAT_TO_FIXED(0.0);
+    m_e_verts[6] = FLOAT_TO_FIXED(m_width); m_e_verts[7] = FLOAT_TO_FIXED(m_height); m_e_verts[8] = FLOAT_TO_FIXED(0.0);
+    m_e_verts[9] = FLOAT_TO_FIXED(m_width); m_e_verts[10] = -FLOAT_TO_FIXED(m_height); m_e_verts[11] = FLOAT_TO_FIXED(0.0);
+    #endif
+
+    m_e_verts = new GLfixed [8];
+
+    //m_e_verts[0] = -1; m_e_verts[1] = -1;
+    //m_e_verts[2] = -1; m_e_verts[3] = 1;
+    //m_e_verts[4] = 1; m_e_verts[5] = 1;
+    //m_e_verts[6] = 1; m_e_verts[7] = -1;
+
+    m_e_verts[0] = FLOAT_TO_FIXED(0.0); m_e_verts[1] = FLOAT_TO_FIXED(0.0);
+    m_e_verts[2] = FLOAT_TO_FIXED(0.0); m_e_verts[3] = FLOAT_TO_FIXED(m_height);
+    m_e_verts[4] = FLOAT_TO_FIXED(m_width); m_e_verts[5] = FLOAT_TO_FIXED(m_height);
+    m_e_verts[6] = FLOAT_TO_FIXED(m_width); m_e_verts[7] = FLOAT_TO_FIXED(0.0);
+
+
+    m_inds = new GLubyte [6];
+
+    // first triangle (bottom left - top left - top right)
+    // second triangle (bottom left - top right - bottom right)
+    m_inds[0] = 0; m_inds[1] = 1; m_inds[2] = 2,
+    m_inds[3] = 0; m_inds[4] = 2; m_inds[5] = 3;
+
 
     m_texcoords = new GLfloat [8];
 
@@ -258,13 +311,19 @@ void Texture::Draw()
 
     m_attriblocation_position = glGetAttribLocation(m_programhandle, "position");
     glEnableVertexAttribArray(m_attriblocation_position);
-    glVertexAttribPointer(m_attriblocation_position, 2, GL_FIXED, 0, 0, m_vertices);
+    
+    //glVertexAttribPointer(m_attriblocation_position, 2, GL_FIXED, 0, 0, m_a_verts);
+    glVertexAttribPointer(m_attriblocation_position, 2, GL_FIXED, 0, 0, m_e_verts);
 
     m_attriblocation_inputtexcoord = glGetAttribLocation(m_programhandle, "inputtexcoord");
     glEnableVertexAttribArray(m_attriblocation_inputtexcoord);
     glVertexAttribPointer(m_attriblocation_inputtexcoord, 2, GL_FLOAT, 0, 0, m_texcoords);
 
-    glDrawArrays(GL_TRIANGLE_FAN, 0, 4);
+    //glDrawArrays(GL_TRIANGLE_FAN, 0, 4);
+    glDrawElements(GL_TRIANGLES, 6, GL_UNSIGNED_BYTE, m_inds);
+
+
+
     m_drawcount++;
 
     glDisableVertexAttribArray(m_attriblocation_position);

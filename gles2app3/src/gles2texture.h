@@ -68,7 +68,9 @@ class Texture
       int      m_attriblocation_inputtexcoord;
 
       GLubyte*  m_texdata;
-      GLfixed*  m_vertices;
+      GLfixed*  m_a_verts;
+      GLfixed*  m_e_verts;
+      GLubyte*  m_inds;
       GLfloat*  m_texcoords;
 
 } ;
