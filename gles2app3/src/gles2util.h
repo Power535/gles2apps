@@ -1,1 +1,1 @@
-int create_program(const char* v, const char* f);
+int create_program(const char *v, const char *f);

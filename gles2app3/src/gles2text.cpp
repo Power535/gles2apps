@@ -13,7 +13,7 @@
 
 #include "Vera.ttf.c"
 
-static const char* const TextvertShader =                               "\n\
+static const char *const TextvertShader = "\n\
                                                                         \n\
 attribute vec4 coord;                                                   \n\
 varying vec2 texpos;                                                    \n\
@@ -24,8 +24,7 @@ void main(void)                                                         \n\
     texpos = coord.zw;                                                  \n\
 }                                                                       \n";
 
-
-static const char* const TextfragShader =                               "\n\
+static const char *const TextfragShader = "\n\
                                                                         \n\
 varying highp vec2 texpos;                                              \n\
 uniform sampler2D tex;                                                  \n\
@@ -36,15 +35,12 @@ void main(void)                                                         \n\
     gl_FragColor = vec4(1, 1, 1, texture2D(tex, texpos).a) * color;     \n\
 }                                                                       \n";
 
-
-
 GLuint program;
 GLint attribute_coord;
 GLint uniform_tex;
 GLint uniform_color;
 
-struct point
-{
+struct point {
     GLfloat x;
     GLfloat y;
     GLfloat s;
@@ -60,37 +56,36 @@ FT_Face face;
 #define MAXWIDTH 1024
 
 /**
- * The atlas struct holds a texture that contains the visible US-ASCII characters
+ * The atlas struct holds a texture that contains the visible US-ASCII
+ *characters
  * of a certain font rendered with a certain character height.
  * It also contains an array that contains all the information necessary to
  * generate the appropriate vertex and texture coordinates for each character.
  *
- * After the constructor is run, you don't need to use any FreeType functions anymore.
+ * After the constructor is run, you don't need to use any FreeType functions
+ *anymore.
  */
-struct atlas
-{
-    GLuint tex;        // texture object
+struct atlas {
+    GLuint tex; // texture object
 
-    int w;            // width of texture in pixels
-    int h;            // height of texture in pixels
+    int w; // width of texture in pixels
+    int h; // height of texture in pixels
 
-    struct
-    {
-        float ax;    // advance.x
-        float ay;    // advance.y
+    struct {
+        float ax; // advance.x
+        float ay; // advance.y
 
-        float bw;    // bitmap.width;
-        float bh;    // bitmap.height;
+        float bw; // bitmap.width;
+        float bh; // bitmap.height;
 
-        float bl;    // bitmap_left;
-        float bt;    // bitmap_top;
+        float bl; // bitmap_left;
+        float bt; // bitmap_top;
 
-        float tx;    // x offset of glyph in texture coordinates
-        float ty;    // y offset of glyph in texture coordinates
-    } c[128];        // character information
+        float tx; // x offset of glyph in texture coordinates
+        float ty; // y offset of glyph in texture coordinates
+    } c[128];     // character information
 
-    atlas(FT_Face face, int height)
-    {
+    atlas(FT_Face face, int height) {
         FT_Set_Pixel_Sizes(face, 0, height);
         FT_GlyphSlot g = face->glyph;
 
@@ -101,7 +96,8 @@ struct atlas
 
         memset(c, 0, sizeof c);
 
-        /* Find minimum size for a texture holding all visible ASCII characters */
+        /* Find minimum size for a texture holding all visible ASCII characters
+         */
         for (int i = 32; i < 128; i++) {
             if (FT_Load_Char(face, i, FT_LOAD_RENDER)) {
                 fprintf(stderr, "Loading character %c failed!\n", i);
@@ -126,7 +122,8 @@ struct atlas
         glBindTexture(GL_TEXTURE_2D, tex);
         glUniform1i(uniform_tex, 0);
 
-        glTexImage2D(GL_TEXTURE_2D, 0, GL_ALPHA, w, h, 0, GL_ALPHA, GL_UNSIGNED_BYTE, 0);
+        glTexImage2D(GL_TEXTURE_2D, 0, GL_ALPHA, w, h, 0, GL_ALPHA,
+                     GL_UNSIGNED_BYTE, 0);
 
         /* We require 1 byte alignment when uploading texture data */
         glPixelStorei(GL_UNPACK_ALIGNMENT, 1);
@@ -157,7 +154,9 @@ struct atlas
                 ox = 0;
             }
 
-            glTexSubImage2D(GL_TEXTURE_2D, 0, ox, oy, g->bitmap.width, g->bitmap.rows, GL_ALPHA, GL_UNSIGNED_BYTE, g->bitmap.buffer);
+            glTexSubImage2D(GL_TEXTURE_2D, 0, ox, oy, g->bitmap.width,
+                            g->bitmap.rows, GL_ALPHA, GL_UNSIGNED_BYTE,
+                            g->bitmap.buffer);
             c[i].ax = g->advance.x >> 6;
             c[i].ay = g->advance.y >> 6;
 
@@ -174,30 +173,27 @@ struct atlas
             ox += g->bitmap.width + 1;
         }
 
-        fprintf(stdout, "Created 1x %dx%d font atlas\n", w, h, w * h / 1024);
+        fprintf(stdout, "Created 1x %dx%d font atlas.\n", w, h, w * h / 1024);
     }
 
-    ~atlas() {
-        glDeleteTextures(1, &tex);
-    }
+    ~atlas() { glDeleteTextures(1, &tex); }
 };
 
-atlas* a48;
+atlas *a48;
 
 #if 0
 atlas* a24;
 atlas* a12;
 #endif
 
-int init_resources()
-{
+int init_resources() {
     /* Initialize the FreeType2 library */
     if (FT_Init_FreeType(&ft)) {
         fprintf(stderr, "Could not init freetype library\n");
         return 0;
     }
 
-    if (FT_New_Memory_Face(ft, (FT_Byte*)Vera_ttf, Vera_ttf_len, 0, &face)) {
+    if (FT_New_Memory_Face(ft, (FT_Byte *)Vera_ttf, Vera_ttf_len, 0, &face)) {
         fprintf(stderr, "Could not load font\n");
         return 0;
     }
@@ -221,10 +217,10 @@ int init_resources()
     /* Create texture atlasses for several font sizes */
     a48 = new atlas(face, 48);
 
-    #if 0
+#if 0
     a24 = new atlas(face, 24);
     a12 = new atlas(face, 12);
-    #endif
+#endif
 
     return 1;
 }
@@ -234,16 +230,14 @@ int init_resources()
  * Rendering starts at coordinates (x, y), z is always 0.
  * The pixel coordinates that the FreeType2 library uses are scaled by (sx, sy).
  */
-void render_text(float x, float y, const char* s, ...)
-{
+void render_text(float x, float y, const char *s, ...) {
     char text[256];
-    const uint8_t* p;
+    const uint8_t *p;
 
     va_list args;
     va_start(args, s);
     vsprintf(text, s, args);
     va_end(args);
-
 
     float sx = 2.0 / 1280;
     float sy = 2.0 / 720;
@@ -254,17 +248,15 @@ void render_text(float x, float y, const char* s, ...)
     glEnable(GL_BLEND);
     glBlendFunc(GL_SRC_ALPHA, GL_ONE_MINUS_SRC_ALPHA);
 
-    GLfloat white[4] = { 1, 1, 1, 1 };
+    GLfloat white[4] = {1, 1, 1, 1};
 
     glUniform4fv(uniform_color, 1, white);
 
+    // render_text(a48, -1 + 1000 * sx, 1 - 680 * sy, sx, sy);
 
-    //render_text(a48, -1 + 1000 * sx, 1 - 680 * sy, sx, sy);
-
-    atlas* a = a48;
+    atlas *a = a48;
     x = -1 + 100 * sx;
-    y =  1 - 680 * sy;
-
+    y = 1 - 680 * sy;
 
     /* Use the texture containing the atlas */
     glBindTexture(GL_TEXTURE_2D, a->tex);
@@ -296,12 +288,17 @@ void render_text(float x, float y, const char* s, ...)
         if (!w || !h)
             continue;
 
-        coords[c++] = (point) {x2, -y2, a->c[*p].tx, a->c[*p].ty};
-        coords[c++] = (point) {x2 + w, -y2, a->c[*p].tx + a->c[*p].bw / a->w, a->c[*p].ty};
-        coords[c++] = (point) {x2, -y2 - h, a->c[*p].tx, a->c[*p].ty + a->c[*p].bh / a->h};
-        coords[c++] = (point) {x2 + w, -y2, a->c[*p].tx + a->c[*p].bw / a->w, a->c[*p].ty};
-        coords[c++] = (point) {x2, -y2 - h, a->c[*p].tx, a->c[*p].ty + a->c[*p].bh / a->h};
-        coords[c++] = (point) {x2 + w, -y2 - h, a->c[*p].tx + a->c[*p].bw / a->w, a->c[*p].ty + a->c[*p].bh / a->h};
+        coords[c++] = (point){x2, -y2, a->c[*p].tx, a->c[*p].ty};
+        coords[c++] =
+            (point){x2 + w, -y2, a->c[*p].tx + a->c[*p].bw / a->w, a->c[*p].ty};
+        coords[c++] =
+            (point){x2, -y2 - h, a->c[*p].tx, a->c[*p].ty + a->c[*p].bh / a->h};
+        coords[c++] =
+            (point){x2 + w, -y2, a->c[*p].tx + a->c[*p].bw / a->w, a->c[*p].ty};
+        coords[c++] =
+            (point){x2, -y2 - h, a->c[*p].tx, a->c[*p].ty + a->c[*p].bh / a->h};
+        coords[c++] = (point){x2 + w, -y2 - h, a->c[*p].tx + a->c[*p].bw / a->w,
+                              a->c[*p].ty + a->c[*p].bh / a->h};
     }
 
     /* Draw all the character on the screen in one go */
@@ -312,7 +309,4 @@ void render_text(float x, float y, const char* s, ...)
     glBindBuffer(GL_ARRAY_BUFFER, 0);
 }
 
-void free_resources()
-{
-    glDeleteProgram(program);
-}
+void free_resources() { glDeleteProgram(program); }

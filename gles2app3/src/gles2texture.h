@@ -1,9 +1,9 @@
 #include <GLES2/gl2.h>
 #include <GLES2/gl2ext.h>
 
-#define FLOAT_TO_FIXED(x) (long)((x) * 65536.0f)
+#define FLOAT_TO_FIXED(x) (long)((x)*65536.0f)
 
-static const char* const defaultvertShader =         "\n\
+static const char *const defaultvertShader = "\n\
                                                       \n\
 varying vec2 texcoord;                                \n\
                                                       \n\
@@ -19,8 +19,7 @@ void main(void)                                       \n\
    gl_Position = mvp * position;                      \n\
 }                                                     \n";
 
-
-static const char* const defaultfragShader =         "\n\
+static const char *const defaultfragShader = "\n\
                                                       \n\
 varying highp vec2 texcoord;                          \n\
                                                       \n\
@@ -31,48 +30,47 @@ void main(void)                                       \n\
    gl_FragColor = texture2D(basetexture, texcoord);   \n\
 }                                                     \n";
 
+class Texture {
 
-class Texture
-{
+  public:
+    void Create(float x = 0, float y = 0, float width = 1, float height = 1,
+                int twidth = 320, int theight = 180, char *filename = 0,
+                bool usebuffers = false);
 
-   public:
+    void Draw();
 
-      void Create(float x=0, float y=0, float width=1, float height=1, int twidth=320, int theight=180, char* filename=0);
+  private:
+    int id;
 
-      void Draw();
+    int m_drawcount;
 
-   private:
+    float m_x;
+    float m_y;
 
-      int      id;
+    float m_width;
+    float m_height;
 
-      int      m_drawcount;
+    const char *m_fragshader;
+    int m_fragshaderhandle;
 
-      float    m_x;
-      float    m_y;
+    const char *m_vertshader;
+    int m_vertshaderhandle;
 
-      float    m_width;
-      float    m_height;
+    int m_programhandle;
 
-      const char* m_fragshader;
-      int      m_fragshaderhandle;
+    GLuint m_textureid;
 
-      const char* m_vertshader;
-      int      m_vertshaderhandle;
+    int m_mvp_pos;
+    int m_attriblocation_position;
+    int m_attriblocation_inputtexcoord;
 
-      int      m_programhandle;
-
-      GLuint   m_textureid;
-
-      int      m_mvp_pos;
-      int      m_attriblocation_position;
-      int      m_attriblocation_inputtexcoord;
-
-      GLubyte*  m_texdata;
-      GLfixed*  m_a_verts;
-      GLfixed*  m_e_verts;
-      GLubyte*  m_inds;
-      GLfloat*  m_texcoords;
-
-} ;
-
-
+    GLubyte *m_texdata;
+    GLfloat *m_a_verts;
+    GLfloat *m_e_verts;
+    GLushort *m_inds;
+    GLfloat *m_texcoords;
+    bool m_usebuffers;
+    GLuint m_e_vertsbuffer;
+    GLuint m_indsbuffer;
+    GLuint m_texcoordsbuffer;
+};

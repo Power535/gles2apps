@@ -1,8 +1,7 @@
 #include <math.h>
 #include "gles2math.h"
 
-void Identity(float pMatrix[4][4])
-{
+void Identity(float pMatrix[4][4]) {
     pMatrix[0][0] = 1.0f;
     pMatrix[0][1] = 0.0f;
     pMatrix[0][2] = 0.0f;
@@ -24,30 +23,25 @@ void Identity(float pMatrix[4][4])
     pMatrix[3][3] = 1.0f;
 }
 
-float Normalize(float afVout[3], float afVin[3])
-{
+float Normalize(float afVout[3], float afVin[3]) {
     float fLen;
 
     fLen = afVin[0] * afVin[0] + afVin[1] * afVin[1] + afVin[2] * afVin[2];
 
-    if (fLen <= 0.0f)
-    {
+    if (fLen <= 0.0f) {
         afVout[0] = 0.0f;
         afVout[1] = 0.0f;
         afVout[2] = 0.0f;
         return fLen;
     }
 
-    if (fLen == 1.0F)
-    {
+    if (fLen == 1.0F) {
         afVout[0] = afVin[0];
         afVout[1] = afVin[1];
         afVout[2] = afVin[2];
         return fLen;
-    }
-    else
-    {
-        fLen = ((float) 1.0) / (float)sqrt((double)fLen);
+    } else {
+        fLen = ((float)1.0) / (float)sqrt((double)fLen);
 
         afVout[0] = afVin[0] * fLen;
         afVout[1] = afVin[1] * fLen;
@@ -56,42 +50,52 @@ float Normalize(float afVout[3], float afVin[3])
     }
 }
 
-void MultiplyMatrix(float psRes[4][4], float psSrcA[4][4], float psSrcB[4][4])
-{
+void MultiplyMatrix(float psRes[4][4], float psSrcA[4][4], float psSrcB[4][4]) {
     float fB00, fB01, fB02, fB03;
     float fB10, fB11, fB12, fB13;
     float fB20, fB21, fB22, fB23;
     float fB30, fB31, fB32, fB33;
     int i;
 
-    fB00 = psSrcB[0][0]; fB01 = psSrcB[0][1];
-    fB02 = psSrcB[0][2]; fB03 = psSrcB[0][3];
-    fB10 = psSrcB[1][0]; fB11 = psSrcB[1][1];
-    fB12 = psSrcB[1][2]; fB13 = psSrcB[1][3];
-    fB20 = psSrcB[2][0]; fB21 = psSrcB[2][1];
-    fB22 = psSrcB[2][2]; fB23 = psSrcB[2][3];
-    fB30 = psSrcB[3][0]; fB31 = psSrcB[3][1];
-    fB32 = psSrcB[3][2]; fB33 = psSrcB[3][3];
+    fB00 = psSrcB[0][0];
+    fB01 = psSrcB[0][1];
+    fB02 = psSrcB[0][2];
+    fB03 = psSrcB[0][3];
+    fB10 = psSrcB[1][0];
+    fB11 = psSrcB[1][1];
+    fB12 = psSrcB[1][2];
+    fB13 = psSrcB[1][3];
+    fB20 = psSrcB[2][0];
+    fB21 = psSrcB[2][1];
+    fB22 = psSrcB[2][2];
+    fB23 = psSrcB[2][3];
+    fB30 = psSrcB[3][0];
+    fB31 = psSrcB[3][1];
+    fB32 = psSrcB[3][2];
+    fB33 = psSrcB[3][3];
 
-    for (i = 0; i < 4; i++)
-    {
-        psRes[i][0] = psSrcA[i][0] * fB00 + psSrcA[i][1] * fB10 + psSrcA[i][2] * fB20 + psSrcA[i][3] * fB30;
-        psRes[i][1] = psSrcA[i][0] * fB01 + psSrcA[i][1] * fB11 + psSrcA[i][2] * fB21 + psSrcA[i][3] * fB31;
-        psRes[i][2] = psSrcA[i][0] * fB02 + psSrcA[i][1] * fB12 + psSrcA[i][2] * fB22 + psSrcA[i][3] * fB32;
-        psRes[i][3] = psSrcA[i][0] * fB03 + psSrcA[i][1] * fB13 + psSrcA[i][2] * fB23 + psSrcA[i][3] * fB33;
+    for (i = 0; i < 4; i++) {
+        psRes[i][0] = psSrcA[i][0] * fB00 + psSrcA[i][1] * fB10 +
+                      psSrcA[i][2] * fB20 + psSrcA[i][3] * fB30;
+        psRes[i][1] = psSrcA[i][0] * fB01 + psSrcA[i][1] * fB11 +
+                      psSrcA[i][2] * fB21 + psSrcA[i][3] * fB31;
+        psRes[i][2] = psSrcA[i][0] * fB02 + psSrcA[i][1] * fB12 +
+                      psSrcA[i][2] * fB22 + psSrcA[i][3] * fB32;
+        psRes[i][3] = psSrcA[i][0] * fB03 + psSrcA[i][1] * fB13 +
+                      psSrcA[i][2] * fB23 + psSrcA[i][3] * fB33;
     }
 }
 
-void Perspective(float pMatrix[4][4], float fovy, float aspect, float zNear, float zFar)
-{
+void Perspective(float pMatrix[4][4], float fovy, float aspect, float zNear,
+                 float zFar) {
     float sine, cotangent, deltaZ;
     float radians;
-    float m[4][4] = {{1,0,0,0},{0,1,0,0},{0,0,1,0},{0,0,0,1}};
+    float m[4][4] = {{1, 0, 0, 0}, {0, 1, 0, 0}, {0, 0, 1, 0}, {0, 0, 0, 1}};
 
     radians = fovy / 2 * PI / 180;
 
     deltaZ = zFar - zNear;
-    sine = (float) sin(radians);
+    sine = (float)sin(radians);
     if ((deltaZ == 0) || (sine == 0) || (aspect == 0)) {
         return;
     }
@@ -108,10 +112,10 @@ void Perspective(float pMatrix[4][4], float fovy, float aspect, float zNear, flo
     MultiplyMatrix(pMatrix, m, pMatrix);
 }
 
-void Orthographic(float pMatrix[4][4], float left, float right, float bottom, float top, float zNear, float zFar)
-{
+void Orthographic(float pMatrix[4][4], float left, float right, float bottom,
+                  float top, float zNear, float zFar) {
     float deltaX, deltaY, deltaZ;
-    float m[4][4] = {{1,0,0,0},{0,1,0,0},{0,0,1,0},{0,0,0,1}};
+    float m[4][4] = {{1, 0, 0, 0}, {0, 1, 0, 0}, {0, 0, 1, 0}, {0, 0, 0, 1}};
 
     deltaX = right - left;
     deltaY = top - bottom;
@@ -125,17 +129,17 @@ void Orthographic(float pMatrix[4][4], float left, float right, float bottom, fl
     m[1][1] = 2 / deltaY;
     m[2][2] = -2 / deltaZ;
 
-    m[3][0] = - ( right + left ) / ( right - left ) ;
-    m[3][1] = - ( top + bottom ) / ( top - bottom ) ;
-    m[3][2] = - ( zFar + zNear ) / ( zFar - zNear ) ;
+    m[3][0] = -(right + left) / (right - left);
+    m[3][1] = -(top + bottom) / (top - bottom);
+    m[3][2] = -(zFar + zNear) / (zFar - zNear);
 
     MultiplyMatrix(pMatrix, m, pMatrix);
 }
 
-void Frustum(float pMatrix[4][4], float left, float right, float bottom, float top, float zNear, float zFar)
-{
+void Frustum(float pMatrix[4][4], float left, float right, float bottom,
+             float top, float zNear, float zFar) {
     float deltaX, deltaY, deltaZ;
-    float m[4][4] = {{1,0,0,0},{0,1,0,0},{0,0,1,0},{0,0,0,1}};
+    float m[4][4] = {{1, 0, 0, 0}, {0, 1, 0, 0}, {0, 0, 1, 0}, {0, 0, 0, 1}};
 
     deltaX = right - left;
     deltaY = top - bottom;
@@ -147,8 +151,8 @@ void Frustum(float pMatrix[4][4], float left, float right, float bottom, float t
 
     m[0][0] = 2 * zNear / deltaX;
     m[1][1] = 2 * zNear / deltaY;
-    m[2][0] = (left + right)/ deltaX;
-    m[2][1] = (top + bottom)/ deltaY;
+    m[2][0] = (left + right) / deltaX;
+    m[2][1] = (top + bottom) / deltaY;
     m[2][2] = -(zFar + zNear) / deltaZ;
     m[2][3] = -1;
     m[3][2] = -2 * zNear * zFar / deltaZ;
@@ -157,8 +161,7 @@ void Frustum(float pMatrix[4][4], float left, float right, float bottom, float t
     MultiplyMatrix(pMatrix, m, pMatrix);
 }
 
-void Scale(float pMatrix[4][4], float fX, float fY, float fZ)
-{
+void Scale(float pMatrix[4][4], float fX, float fY, float fZ) {
     float fM0, fM1, fM2, fM3;
 
     fM0 = fX * pMatrix[0][0];
@@ -189,14 +192,17 @@ void Scale(float pMatrix[4][4], float fX, float fY, float fZ)
     pMatrix[2][3] = fM3;
 }
 
-void Translate(float pMatrix[4][4], float fX, float fY, float fZ)
-{
+void Translate(float pMatrix[4][4], float fX, float fY, float fZ) {
     float fM30, fM31, fM32, fM33;
 
-    fM30 = fX * pMatrix[0][0] + fY * pMatrix[1][0] + fZ * pMatrix[2][0] + pMatrix[3][0];
-    fM31 = fX * pMatrix[0][1] + fY * pMatrix[1][1] + fZ * pMatrix[2][1] + pMatrix[3][1];
-    fM32 = fX * pMatrix[0][2] + fY * pMatrix[1][2] + fZ * pMatrix[2][2] + pMatrix[3][2];
-    fM33 = fX * pMatrix[0][3] + fY * pMatrix[1][3] + fZ * pMatrix[2][3] + pMatrix[3][3];
+    fM30 = fX * pMatrix[0][0] + fY * pMatrix[1][0] + fZ * pMatrix[2][0] +
+           pMatrix[3][0];
+    fM31 = fX * pMatrix[0][1] + fY * pMatrix[1][1] + fZ * pMatrix[2][1] +
+           pMatrix[3][1];
+    fM32 = fX * pMatrix[0][2] + fY * pMatrix[1][2] + fZ * pMatrix[2][2] +
+           pMatrix[3][2];
+    fM33 = fX * pMatrix[0][3] + fY * pMatrix[1][3] + fZ * pMatrix[2][3] +
+           pMatrix[3][3];
 
     pMatrix[3][0] = fM30;
     pMatrix[3][1] = fM31;
@@ -204,8 +210,7 @@ void Translate(float pMatrix[4][4], float fX, float fY, float fZ)
     pMatrix[3][3] = fM33;
 }
 
-void Rotate(float pMatrix[4][4], float fX, float fY, float fZ, float fAngle)
-{
+void Rotate(float pMatrix[4][4], float fX, float fY, float fZ, float fAngle) {
     float fRadians, fSine, fCosine, fAB, fBC, fCA, fT;
     float afAv[4], afAxis[4];
     float afMatrix[4][4];
