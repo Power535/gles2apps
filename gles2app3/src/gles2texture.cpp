@@ -305,9 +305,6 @@ void Texture::Draw() {
         {1, 0, 0, 0}, {0, 1, 0, 0}, {0, 0, 1, 0}, {0, 0, 0, 1}};
 
     Identity(modelview);
-
-    // Translate(modelview, -0.5 + fabs(sin(m_drawcount * DegreesToRadians)), 0,
-    // 0);
     Translate(modelview,
               m_x +
                   0.01 * sin((m_drawcount * 1 + id * 360 / (global_id + 1)) *
@@ -317,29 +314,16 @@ void Texture::Draw() {
                              DegreesToRadians),
               0);
 
-    /*
-     * Rotate(modelview, 0, 0, 1, m_drawcount);
-     */
-
     Identity(projection);
     Orthographic(projection, 0.0f, 1.0f, 0.0f, 1.0f, 0.0f, 1.0f);
-
     MultiplyMatrix(mvp, modelview, projection);
 
     m_mvp_pos = glGetUniformLocation(m_programhandle, "mvp");
     glUniformMatrix4fv(m_mvp_pos, 1, GL_FALSE, &mvp[0][0]);
 
-    glBindTexture(GL_TEXTURE_2D, m_textureid);
-
-    glUseProgram(m_programhandle);
-
-    glBlendFunc(GL_SRC_ALPHA, GL_ONE_MINUS_SRC_ALPHA);
-    glEnable(GL_BLEND);
-
     m_attriblocation_position =
         glGetAttribLocation(m_programhandle, "position");
     glEnableVertexAttribArray(m_attriblocation_position);
-
     if (m_usebuffers) {
         glBindBuffer(GL_ARRAY_BUFFER, m_e_vertsbuffer);
         glVertexAttribPointer(m_attriblocation_position, 3, GL_FLOAT, 0, 0, 0);
@@ -362,6 +346,10 @@ void Texture::Draw() {
         glVertexAttribPointer(m_attriblocation_inputtexcoord, 2, GL_FLOAT, 0, 0,
                               m_texcoords);
     }
+
+    glBindTexture(GL_TEXTURE_2D, m_textureid);
+
+    glUseProgram(m_programhandle);
 
     if (m_usebuffers) {
         glBindBuffer(GL_ELEMENT_ARRAY_BUFFER, m_indsbuffer);

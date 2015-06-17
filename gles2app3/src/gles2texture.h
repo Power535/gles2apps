@@ -7,7 +7,7 @@ static const char *const defaultvertShader = "\n\
                                                       \n\
 varying vec2 texcoord;                                \n\
                                                       \n\
-attribute vec4 position;                              \n\
+attribute vec3 position;                              \n\
 attribute vec2 inputtexcoord;                         \n\
                                                       \n\
 uniform mat4 mvp;                                     \n\
@@ -16,12 +16,13 @@ void main(void)                                       \n\
 {                                                     \n\
    texcoord = inputtexcoord;                          \n\
                                                       \n\
-   gl_Position = mvp * position;                      \n\
+   gl_Position = mvp * vec4(position, 1.0);           \n\
 }                                                     \n";
 
 static const char *const defaultfragShader = "\n\
+precision mediump float;                              \n\
                                                       \n\
-varying highp vec2 texcoord;                          \n\
+varying vec2 texcoord;                                \n\
                                                       \n\
 uniform sampler2D basetexture;                        \n\
                                                       \n\
