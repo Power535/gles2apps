@@ -7,11 +7,12 @@
 #include <sys/time.h>
 #include <getopt.h>
 
-#ifdef __i386__
+
+#ifdef IS_INTELCE
 #include <libgdl.h>
 #endif
 
-#ifdef __mips__
+#ifdef IS_BCM_NEXUS
 #include <refsw/nexus_config.h>
 #include <refsw/nexus_platform.h>
 #include <refsw/nexus_display.h>
@@ -19,7 +20,23 @@
 #include <refsw/default_nexus.h>
 #endif
 
-#ifdef __arm__
+#ifdef IS_RPI
+#include <bcm_host.h>
+#endif
+
+#ifdef IS_INTELCE
+#include <libgdl.h>
+#endif
+
+#ifdef IS_BCM_NEXUS
+#include <refsw/nexus_config.h>
+#include <refsw/nexus_platform.h>
+#include <refsw/nexus_display.h>
+#include <refsw/nexus_core_utils.h>
+#include <refsw/default_nexus.h>
+#endif
+
+#ifdef IS_RPI
 #include <bcm_host.h>
 extern DISPMANX_DISPLAY_HANDLE_T dispman_display;
 #endif
@@ -49,7 +66,7 @@ static _u64 timestamp_usec(void) {
     return ((_u64)((_u64)mytime.tv_usec + (_u64)mytime.tv_sec * (_u64)1000000));
 }
 
-#ifdef __i386__
+#ifdef IS_INTELCE
 
 // Plane size and position
 #define ORIGIN_X 0
@@ -112,7 +129,7 @@ static gdl_ret_t setup_plane(gdl_plane_id_t plane) {
 }
 #endif
 
-#ifdef __mips__
+#ifdef IS_BCM_NEXUS
 
 #ifdef __cplusplus
 extern "C" {
@@ -355,7 +372,7 @@ int main(int argc, char *argv[]) {
         return 1;
     }
 
-#ifdef __i386__
+#ifdef IS_INTELCE
     gdl_plane_id_t plane = GDL_PLANE_ID_UPP_C;
 #endif
 
@@ -363,7 +380,7 @@ int main(int argc, char *argv[]) {
     EGLSurface surface;
     EGLContext context;
 
-#ifdef __i386
+#ifdef IS_INTELCE
     gdl_init(0);
 
     setup_plane(plane);
@@ -371,13 +388,13 @@ int main(int argc, char *argv[]) {
     egl_init(&display, &surface, &context, 1280, 720, plane);
 #else
 
-#ifdef __mips__
+#ifdef IS_BCM_NEXUS
 
     InitPlatform();
 
 #endif
 
-#ifdef __arm__
+#ifdef IS_RPI
 
     bcm_host_init();
 
@@ -502,17 +519,17 @@ bail:
 
     egl_exit(display, surface, context);
 
-#ifdef __i386__
+#ifdef IS_INTELCE
     gdl_close();
 #endif
 
-#ifdef __mips__
+#ifdef IS_BCM_NEXUS
 
     DeInitPlatform();
 
 #endif
 
-#ifdef __arm__
+#ifdef IS_RPI
 // destroyDispmanxLayer(window);
 #endif
 

@@ -12,11 +12,19 @@
 #include <EGL/egl.h>
 #include <EGL/eglext.h>
 
-#ifdef __i386__
+#if defined(__i386__)
+#define IS_INTELCE
+#elif defined (HAVE_BCM_HOST_H)
+#define IS_RPI
+#elif defined (HAVE_REFSW_NEXUS_CONFIG_H)
+#define IS_BCM_NEXUS
+#endif
+
+#ifdef IS_INTELCE
 #include <libgdl.h>
 #endif
 
-#ifdef __mips__
+#ifdef IS_BCM_NEXUS
 #include <refsw/nexus_config.h>
 #include <refsw/nexus_platform.h>
 #include <refsw/nexus_display.h>
@@ -24,11 +32,12 @@
 #include <refsw/default_nexus.h>
 #endif
 
-#ifdef __arm__
+#ifdef IS_RPI
 #include <bcm_host.h>
 #endif
 
-#ifdef __mips__
+
+#ifdef IS_BCM_NEXUS
 
 static unsigned int gs_screen_wdt = 1280;
 static unsigned int gs_screen_hgt = 720;
@@ -184,7 +193,7 @@ void DeInitPlatform(void) {
 
 #endif
 
-#ifdef __arm__
+#ifdef IS_RPI
 
 static DISPMANX_DISPLAY_HANDLE_T dispman_display = 0;
 
@@ -258,7 +267,7 @@ typedef struct fbdev_window {
 
 #endif
 
-#ifdef __i386__
+#ifdef IS_INTELCE
 static void egl_init(EGLDisplay *pdisplay, EGLSurface *psurface,
                      EGLContext *pcontext, int width, int height,
                      gdl_plane_id_t plane);
@@ -389,7 +398,7 @@ static void handle_egl_error(const char *name) {
            error_strings[error_code - EGL_SUCCESS], error_code);
 }
 
-#ifdef __i386__
+#ifdef IS_INTELCE
 
 // Plane size and position
 #define ORIGIN_X 0
@@ -453,7 +462,7 @@ static gdl_ret_t setup_plane(gdl_plane_id_t plane) {
 
 #endif
 
-#ifdef __i386__
+#ifdef IS_INTELCE
 void egl_init(EGLDisplay *pdisplay, EGLSurface *psurface, EGLContext *pcontext,
               int width, int height, gdl_plane_id_t plane)
 #else
@@ -499,13 +508,13 @@ void egl_init(EGLDisplay *pdisplay, EGLSurface *psurface, EGLContext *pcontext,
                                          (EGLNativeWindowType)&window, NULL);
     }
 
-#ifdef __i386__
+#ifdef IS_INTELCE
     else if (strstr(eglQueryString(display, EGL_VENDOR), "Intel")) {
         surface = eglCreateWindowSurface(display, configs[0],
                                          (NativeWindowType)plane, NULL);
     }
 #endif
-#ifdef __mips__
+#ifdef IS_BCM_NEXUS
     else if (strstr(eglQueryString(display, EGL_VENDOR), "Broadcom")) {
         NXPL_NativeWindowInfo win_info;
 
@@ -523,7 +532,7 @@ void egl_init(EGLDisplay *pdisplay, EGLSurface *psurface, EGLContext *pcontext,
     }
 #endif
 
-#ifdef __arm__
+#ifdef IS_RPI
 
     else if (strstr(eglQueryString(display, EGL_VENDOR), "Broadcom")) {
 
@@ -1186,7 +1195,7 @@ int main(int argc, char **argv) {
         close(fbdev);
     }
 
-#ifdef __i386
+#ifdef IS_INTELCE
     gdl_init(0);
 
     setup_plane(plane);
@@ -1194,13 +1203,13 @@ int main(int argc, char **argv) {
     egl_init(&display, &surface, &context, varInfo.xres, varInfo.yres, plane);
 #else
 
-#ifdef __mips__
+#ifdef IS_BCM_NEXUS
 
     InitPlatform();
 
 #endif
 
-#ifdef __arm__
+#ifdef IS_RPI
 
     bcm_host_init();
 
@@ -1231,15 +1240,15 @@ term:
 
     egl_exit(display, surface, context);
 
-#ifdef __i386__
+#ifdef IS_INTELCE
     gdl_close();
 #endif
 
-#ifdef __mips__
+#ifdef IS_BCM_NEXUS
     DeInitPlatform();
 #endif
 
-#ifdef __arm__
+#ifdef IS_RPI
 // destroyDispmanxLayer(window);
 #endif
 

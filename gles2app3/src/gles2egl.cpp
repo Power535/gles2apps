@@ -2,11 +2,26 @@
 #include <string.h>
 #include <EGL/egl.h>
 
-#ifdef __i386__
-#include "libgdl.h"
+
+#if defined(__i386__)
+#define IS_INTELCE
+#elif defined (HAVE_BCM_HOST_H)
+#define IS_RPI
+#elif defined (HAVE_REFSW_NEXUS_CONFIG_H)
+#define IS_BCM_NEXUS
 #endif
 
-#ifdef __mips__
+
+#ifdef IS_RPI
+#include <bcm_host.h>
+#endif
+
+
+#ifdef IS_INTELCE
+#include <libgdl.h>
+#endif
+
+#ifdef IS_BCM_NEXUS
 #include <refsw/nexus_config.h>
 #include <refsw/nexus_platform.h>
 #include <refsw/nexus_display.h>
@@ -19,11 +34,11 @@ extern void *gs_native_window;
 
 #endif
 
-#ifdef __arm__
+#ifdef IS_RPI
 #include <bcm_host.h>
 #endif
 
-#ifdef __arm__
+#ifdef IS_RPI
 
 DISPMANX_DISPLAY_HANDLE_T dispman_display = 0;
 
@@ -175,7 +190,7 @@ void egl_init(EGLDisplay *pdisplay, EGLSurface *psurface, EGLContext *pcontext,
     }
 #endif
 
-#ifdef __arm__
+#ifdef IS_RPI
 
     else if (strstr(eglQueryString(display, EGL_VENDOR), "Broadcom")) {
 

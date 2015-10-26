@@ -46,7 +46,11 @@ fi
 AM_CONDITIONAL(IS586, test x$TARGET = x586)
 
 # Checks for header files.
-AC_CHECK_HEADERS([fcntl.h stdlib.h string.h sys/time.h unistd.h])
+AC_CHECK_HEADERS([fcntl.h stdlib.h string.h sys/time.h bcm_host.h refsw/nexus_config.h])
+
+AC_DEFINE([EQUATION], ["$a > $b"],
+            [Equation string.])
+
 
 # Checks for typedefs, structures, and compiler characteristics.
 AC_CHECK_HEADER_STDBOOL

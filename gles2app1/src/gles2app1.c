@@ -5,11 +5,21 @@
 #include <EGL/egl.h>
 #include <GLES2/gl2.h>
 
-#ifdef __i386__
+
+#if defined(__i386__)
+#define IS_INTELCE
+#elif defined (HAVE_BCM_HOST_H)
+#define IS_RPI
+#elif defined (HAVE_REFSW_NEXUS_CONFIG_H)
+#define IS_BCM_NEXUS
+#endif
+
+
+#ifdef IS_INTELCE
 #include <libgdl.h>
 #endif
 
-#ifdef __mips__
+#ifdef IS_BCM_NEXUS
 #include <refsw/nexus_config.h>
 #include <refsw/nexus_platform.h>
 #include <refsw/nexus_display.h>
@@ -17,7 +27,7 @@
 #include <refsw/default_nexus.h>
 #endif
 
-#ifdef __arm__
+#ifdef IS_RPI
 #include <bcm_host.h>
 #endif
 
@@ -43,7 +53,7 @@ typedef struct fbdev_window {
 } fbdev_window;
 #endif
 
-#ifdef __arm__
+#ifdef IS_RPI
 
 static DISPMANX_DISPLAY_HANDLE_T dispman_display = 0;
 
@@ -100,7 +110,7 @@ static void destroyDispmanxLayer(EGLNativeWindowType window) {
 
 #endif
 
-#ifdef __mips__
+#ifdef BCM_NEXUS
 
 static unsigned int gs_screen_wdt = 1280;
 static unsigned int gs_screen_hgt = 720;
@@ -335,7 +345,7 @@ static gdl_ret_t setup_plane(gdl_plane_id_t plane) {
 }
 #endif
 
-#ifdef __i386__
+#ifdef IS_INTELCE
 static int _eglInit(gdl_plane_id_t plane)
 #else
 static int _eglInit()
@@ -406,7 +416,7 @@ static int _eglInit()
     }
 #endif
 
-#ifdef __mips__
+#ifdef BCM_NEXUS
 
     else if (strstr(eglQueryString(display, EGL_VENDOR), "Broadcom")) {
 
@@ -426,7 +436,7 @@ static int _eglInit()
     }
 #endif
 
-#ifdef __arm__
+#ifdef IS_BCM_RPI
 
     else if (strstr(eglQueryString(display, EGL_VENDOR), "Broadcom")) {
 
@@ -526,7 +536,7 @@ static int _eglTestError(const char *text) {
 }
 
 int main(int argc, char **argv) {
-#ifdef __i386__
+#ifdef IS_INTELCE
     gdl_plane_id_t plane = GDL_PLANE_ID_UPP_C;
 
     gdl_init(0);
@@ -537,13 +547,13 @@ int main(int argc, char **argv) {
 
 #else
 
-#ifdef __mips__
+#ifdef BCM_NEXUS
 
     InitPlatform();
 
 #endif
 
-#ifdef __arm__
+#ifdef IS_RPI
 
     bcm_host_init();
 
@@ -604,15 +614,15 @@ int main(int argc, char **argv) {
 
     usleep(100 * 1000);
 
-#ifdef __i386__
+#ifdef IS_INTELCE
     gdl_close();
 #endif
 
-#ifdef __mips__
+#ifdef BCM_NEXUS
     DeInitPlatform();
 #endif
 
-#ifdef __arm__
+#ifdef IS_RPI
 // destroyDispmanxLayer(window);
 #endif
 
