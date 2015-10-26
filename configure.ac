@@ -28,8 +28,8 @@ case "$host" in
   mips*-*-linux*)
 	TARGET=MIPS;
 	;;
-  i586-*-*)
-	TARGET=586;
+  i686-*-*)
+	TARGET=686;
 esac
 
 # Checks for pkg-config
@@ -39,11 +39,11 @@ PKG_CHECK_MODULES([glesv2], [glesv2], [], [AC_MSG_ERROR([Unable to find libGLESv
 PKG_CHECK_MODULES([freetype2], [freetype2], [], [AC_MSG_ERROR([Unable to find libfreetype])])
 PKG_CHECK_MODULES([libpng], [libpng >= 1.2.0], [], [AC_MSG_ERROR([Unable to find libpng])])
 
-if test x$TARGET = x586; then
+if test x$TARGET = x686; then
 PKG_CHECK_MODULES([gdl], [gdl], [], [AC_MSG_ERROR([Unable to find libgdl])])
 fi
 
-AM_CONDITIONAL(IS586, test x$TARGET = x586)
+AM_CONDITIONAL(IS686, test x$TARGET = x686)
 
 # Checks for header files.
 AC_CHECK_HEADERS([fcntl.h stdlib.h string.h sys/time.h bcm_host.h refsw/nexus_config.h])
