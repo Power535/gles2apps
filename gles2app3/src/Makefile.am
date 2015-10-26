@@ -27,7 +27,7 @@ gles2app3_SOURCES = \
     gles2text.cpp \
     gles2text.h
 
-if IS586
+if IS686
 AM_CPPFLAGS += $(gdl_CFLAGS)
 gles2app3_LDADD += $(gdl_LIBS)
 endif
