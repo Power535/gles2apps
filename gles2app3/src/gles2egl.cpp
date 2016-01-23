@@ -9,13 +9,13 @@
 #define IS_RPI
 #elif defined (HAVE_REFSW_NEXUS_CONFIG_H)
 #define IS_BCM_NEXUS
+#else
+#error NO KNOWN TARGET!
 #endif
-
 
 #ifdef IS_RPI
 #include <bcm_host.h>
 #endif
-
 
 #ifdef IS_INTELCE
 #include <libgdl.h>
@@ -121,7 +121,7 @@ typedef struct fbdev_window {
 
 static fbdev_window window;
 
-#ifdef __i386__
+#ifdef IS_INTELCE
 void egl_init(EGLDisplay *pdisplay, EGLSurface *psurface, EGLContext *pcontext,
               int width, int height, gdl_plane_id_t plane)
 #else
@@ -166,14 +166,14 @@ void egl_init(EGLDisplay *pdisplay, EGLSurface *psurface, EGLContext *pcontext,
         surface = eglCreateWindowSurface(display, configs[0],
                                          (EGLNativeWindowType)&window, NULL);
     }
-#ifdef __i386__
-    else if (strstr(eglQueryString(display, EGL_VENDOR), "Intel")) {
+#ifdef IS_INTELCE
+    if (strstr(eglQueryString(display, EGL_VENDOR), "Intel")) {
         surface = eglCreateWindowSurface(display, configs[0],
                                          (NativeWindowType)plane, NULL);
     }
 #endif
-#ifdef __mips__
-    else if (strstr(eglQueryString(display, EGL_VENDOR), "Broadcom")) {
+#ifdef IS_BCM_NEXUS
+    if (strstr(eglQueryString(display, EGL_VENDOR), "Broadcom")) {
         NXPL_NativeWindowInfo win_info;
 
         win_info.x = 0;
@@ -192,16 +192,12 @@ void egl_init(EGLDisplay *pdisplay, EGLSurface *psurface, EGLContext *pcontext,
 
 #ifdef IS_RPI
 
-    else if (strstr(eglQueryString(display, EGL_VENDOR), "Broadcom")) {
+    if (strstr(eglQueryString(display, EGL_VENDOR), "Broadcom")) {
 
         surface = eglCreateWindowSurface(display, configs[0],
                                          createDispmanxLayer(), NULL);
     }
 #endif
-
-    else {
-        surface = eglCreateWindowSurface(display, configs[0], 0, NULL);
-    }
 
     if (surface == EGL_NO_SURFACE) {
         handle_egl_error("eglCreateWindowSurface");

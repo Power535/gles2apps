@@ -18,6 +18,8 @@
 #define IS_RPI
 #elif defined (HAVE_REFSW_NEXUS_CONFIG_H)
 #define IS_BCM_NEXUS
+#else
+#error NO KNOWN TARGET!
 #endif
 
 #ifdef IS_INTELCE
@@ -1176,10 +1178,6 @@ int create_program(const char *v, const char *f) {
 int main(int argc, char **argv) {
     int i;
 
-#ifdef __i386__
-    gdl_plane_id_t plane = GDL_PLANE_ID_UPP_C;
-#endif
-
     EGLDisplay display;
     EGLSurface surface;
     EGLContext context;
@@ -1196,27 +1194,20 @@ int main(int argc, char **argv) {
     }
 
 #ifdef IS_INTELCE
+    gdl_plane_id_t plane = GDL_PLANE_ID_UPP_C;
     gdl_init(0);
-
     setup_plane(plane);
-
     egl_init(&display, &surface, &context, varInfo.xres, varInfo.yres, plane);
-#else
+#endif
 
 #ifdef IS_BCM_NEXUS
-
     InitPlatform();
-
+    egl_init(&display, &surface, &context, varInfo.xres, varInfo.yres);
 #endif
 
 #ifdef IS_RPI
-
     bcm_host_init();
-
     dispman_display = vc_dispmanx_display_open(0 /* LCD */);
-
-#endif
-
     egl_init(&display, &surface, &context, varInfo.xres, varInfo.yres);
 #endif
 

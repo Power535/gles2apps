@@ -7,17 +7,18 @@
 #include <sys/time.h>
 #include <getopt.h>
 
+#if defined(__i386__)
+#define IS_INTELCE
+#elif defined (HAVE_BCM_HOST_H)
+#define IS_RPI
+#elif defined (HAVE_REFSW_NEXUS_CONFIG_H)
+#define IS_BCM_NEXUS
+#else
+#error NO KNOWN TARGET!
+#endif
 
 #ifdef IS_INTELCE
 #include <libgdl.h>
-#endif
-
-#ifdef IS_BCM_NEXUS
-#include <refsw/nexus_config.h>
-#include <refsw/nexus_platform.h>
-#include <refsw/nexus_display.h>
-#include <refsw/nexus_core_utils.h>
-#include <refsw/default_nexus.h>
 #endif
 
 #ifdef IS_RPI

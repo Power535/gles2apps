@@ -5,15 +5,15 @@
 #include <EGL/egl.h>
 #include <GLES2/gl2.h>
 
-
 #if defined(__i386__)
 #define IS_INTELCE
 #elif defined (HAVE_BCM_HOST_H)
 #define IS_RPI
 #elif defined (HAVE_REFSW_NEXUS_CONFIG_H)
 #define IS_BCM_NEXUS
+#else
+#error NO KNOWN TARGET!
 #endif
-
 
 #ifdef IS_INTELCE
 #include <libgdl.h>
@@ -29,28 +29,6 @@
 
 #ifdef IS_RPI
 #include <bcm_host.h>
-#endif
-
-#define EGLCHECK(x)                                                            \
-    do {                                                                       \
-        if (1) {                                                               \
-            printf("[%s]\n", #x);                                              \
-        }                                                                      \
-                                                                               \
-        EGLint iErr = eglGetError();                                           \
-        if (iErr != EGL_SUCCESS) {                                             \
-            printf("%s failed (0x%08x).\n", text, iErr);                       \
-        }                                                                      \
-        while (0)
-
-/*
-   Note: fbdev_window is already defined if we are using ARM's EGL/eglplatform.h
-*/
-#ifndef _FBDEV_WINDOW_H_
-typedef struct fbdev_window {
-    unsigned short width;
-    unsigned short height;
-} fbdev_window;
 #endif
 
 #ifdef IS_RPI
@@ -108,9 +86,9 @@ static void destroyDispmanxLayer(EGLNativeWindowType window) {
     free(eglWindow);
 }
 
-#endif
+#endif //IS_RPI
 
-#ifdef BCM_NEXUS
+#ifdef IS_BCM_NEXUS
 
 static unsigned int gs_screen_wdt = 1280;
 static unsigned int gs_screen_hgt = 720;
@@ -266,22 +244,76 @@ void DeInitPlatform(void) {
 
 #endif
 
-static fbdev_window window;
-
 EGLDisplay display;
 EGLConfig config;
 EGLSurface surface;
 EGLContext context;
 
-#ifdef __i386__
+#ifdef IS_INTELCE
 static int _eglInit(gdl_plane_id_t plane);
 #else
 static int _eglInit(void);
 #endif
 
-static int _eglExit(void);
-static void _eglClearError(void);
-static int _eglTestError(const char *text);
+static int _eglTestError(const char *text)
+{
+    EGLint iErr = eglGetError();
+    if (iErr != EGL_SUCCESS) {
+        printf("%s failed (0x%08x).\n", text, iErr);
+        return 0;
+    }
+
+    return 1;
+}
+
+static void _eglClearError(void)
+{
+    EGLint iErr = eglGetError();
+}
+
+static int _eglExit(void) {
+    printf("glFinish()\n");
+    usleep(50 * 1000);
+    glFinish();
+
+    printf("eglWaitClient()\n");
+    usleep(50 * 1000);
+    eglWaitClient();
+
+    printf("eglReleaseThread()\n");
+    usleep(50 * 1000);
+    eglReleaseThread();
+
+    printf("eglMakeCurrent()\n");
+    usleep(50 * 1000);
+    eglMakeCurrent(display, EGL_NO_SURFACE, EGL_NO_SURFACE, EGL_NO_CONTEXT);
+    _eglTestError("eglMakeCurrent(eglDisplay, EGL_NO_SURFACE, EGL_NO_SURFACE, "
+                  "EGL_NO_CONTEXT)...");
+
+#if 1
+    printf("eglDestroyContext()\n");
+    usleep(50 * 1000);
+    eglDestroyContext(display, context);
+    _eglTestError("eglDestroyContext()");
+#endif
+
+    printf("eglDestroySurface()\n");
+    usleep(50 * 1000);
+    eglDestroySurface(display, surface);
+    _eglTestError("eglDestroySurface()");
+
+#if 1
+    printf("eglTerminate()\n");
+    usleep(50 * 1000);
+    eglTerminate(display);
+    _eglTestError("eglTerminate()");
+#endif
+
+    return 0;
+}
+
+
+#ifdef IS_INTELCE
 
 // Plane size and position
 #define ORIGIN_X 0
@@ -290,7 +322,6 @@ static int _eglTestError(const char *text);
 #define HEIGHT 720
 #define ASPECT ((GLfloat)WIDTH / (GLfloat)HEIGHT)
 
-#ifdef __i386__
 // Initializes a plane for the graphics to be rendered to
 static gdl_ret_t setup_plane(gdl_plane_id_t plane) {
     gdl_pixel_format_t pixelFormat = GDL_PF_ARGB_32;
@@ -376,15 +407,17 @@ static int _eglInit()
 
                                   EGL_NONE};
 
-    printf("eglGetDisplay()\n");
     usleep(50 * 1000);
+    printf("+eglGetDisplay()\n");
     display = eglGetDisplay((EGLNativeDisplayType)EGL_DEFAULT_DISPLAY);
+    printf("-eglGetDisplay()\n");
     if (!_eglTestError("eglGetDisplay()"))
         return -1;
 
-    printf("eglInitialize()\n");
     usleep(50 * 1000);
+    printf("+eglInitialize()\n");
     eglInitialize(display, &iMajorVersion, &iMinorVersion);
+    printf("-eglInitialize()\n");
     if (!_eglTestError("eglInitialize()"))
         return -1;
 
@@ -401,24 +434,16 @@ static int _eglInit()
         return -1;
     printf("iConfigs=%d\n", iConfigs);
 
-    if (strstr(eglQueryString(display, EGL_VENDOR), "ARM")) {
-        window.width = 1280;
-        window.height = 720;
-        surface = eglCreateWindowSurface(display, config,
-                                         (EGLNativeWindowType)&window, NULL);
-        printf("Arm\n");
-    }
-#ifdef __i386__
-    else if (strstr(eglQueryString(display, EGL_VENDOR), "Intel")) {
+#ifdef IS_INTELCE
+    if (strstr(eglQueryString(display, EGL_VENDOR), "Intel")) {
         printf("Intel\n");
         surface = eglCreateWindowSurface(display, config,
                                          (NativeWindowType)plane, NULL);
     }
 #endif
 
-#ifdef BCM_NEXUS
-
-    else if (strstr(eglQueryString(display, EGL_VENDOR), "Broadcom")) {
+#ifdef IS_BCM_NEXUS
+    if (strstr(eglQueryString(display, EGL_VENDOR), "Broadcom")) {
 
         NXPL_NativeWindowInfo win_info;
 
@@ -437,18 +462,12 @@ static int _eglInit()
 #endif
 
 #ifdef IS_BCM_RPI
-
-    else if (strstr(eglQueryString(display, EGL_VENDOR), "Broadcom")) {
+    if (strstr(eglQueryString(display, EGL_VENDOR), "Broadcom")) {
 
         surface = eglCreateWindowSurface(display, config, createDispmanxLayer(),
                                          NULL);
     }
 #endif
-
-    else {
-        surface = eglCreateWindowSurface(display, config, 0, NULL);
-        printf("Other\n");
-    }
 
     if (!_eglTestError("eglCreateWindowSurface()"))
         return -1;
@@ -482,87 +501,27 @@ static int _eglInit()
     return 0;
 }
 
-static int _eglExit(void) {
-    printf("glFinish()\n");
-    usleep(50 * 1000);
-    glFinish();
-
-    printf("eglWaitClient()\n");
-    usleep(50 * 1000);
-    eglWaitClient();
-
-    printf("eglReleaseThread()\n");
-    usleep(50 * 1000);
-    eglReleaseThread();
-
-    printf("eglMakeCurrent()\n");
-    usleep(50 * 1000);
-    eglMakeCurrent(display, EGL_NO_SURFACE, EGL_NO_SURFACE, EGL_NO_CONTEXT);
-    _eglTestError("eglMakeCurrent(eglDisplay, EGL_NO_SURFACE, EGL_NO_SURFACE, "
-                  "EGL_NO_CONTEXT)...");
-
-#if 1
-    printf("eglDestroyContext()\n");
-    usleep(50 * 1000);
-    eglDestroyContext(display, context);
-    _eglTestError("eglDestroyContext()");
-#endif
-
-    printf("eglDestroySurface()\n");
-    usleep(50 * 1000);
-    eglDestroySurface(display, surface);
-    _eglTestError("eglDestroySurface()");
-
-#if 1
-    printf("eglTerminate()\n");
-    usleep(50 * 1000);
-    eglTerminate(display);
-    _eglTestError("eglTerminate()");
-#endif
-
-    return 0;
-}
-
-static void _eglClearError(void) { EGLint iErr = eglGetError(); }
-
-static int _eglTestError(const char *text) {
-    EGLint iErr = eglGetError();
-    if (iErr != EGL_SUCCESS) {
-        printf("%s failed (0x%08x).\n", text, iErr);
-        return 0;
-    }
-
-    return 1;
-}
 
 int main(int argc, char **argv) {
+
 #ifdef IS_INTELCE
     gdl_plane_id_t plane = GDL_PLANE_ID_UPP_C;
-
     gdl_init(0);
-
     setup_plane(plane);
-
     _eglInit(plane);
+#endif
 
-#else
-
-#ifdef BCM_NEXUS
-
+#ifdef IS_BCM_NEXUS
     InitPlatform();
-
+    _eglInit();
 #endif
 
 #ifdef IS_RPI
-
     bcm_host_init();
-
     dispman_display = vc_dispmanx_display_open(0 /* LCD */);
-
-#endif
-
     _eglInit();
 #endif
+
 
     eglSwapInterval(display, 1);
 
@@ -618,7 +577,7 @@ int main(int argc, char **argv) {
     gdl_close();
 #endif
 
-#ifdef BCM_NEXUS
+#ifdef IS_BCM_NEXUS
     DeInitPlatform();
 #endif
 
