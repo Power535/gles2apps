@@ -9,10 +9,10 @@
 
 #if defined(__i386__)
 #define IS_INTELCE
-#elif defined (HAVE_BCM_HOST_H)
-#define IS_RPI
 #elif defined (HAVE_REFSW_NEXUS_CONFIG_H)
 #define IS_BCM_NEXUS
+#elif defined (__arm__)
+#define IS_RPI
 #else
 #error NO KNOWN TARGET!
 #endif
