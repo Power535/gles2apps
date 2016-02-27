@@ -20,17 +20,39 @@
 #include <libgdl.h>
 #endif
 
+
 #ifdef IS_BCM_NEXUS
+
+//#define IS_BCM_NEXUS_CLIENT
+#ifdef IS_BCM_NEXUS_CLIENT
+
+#ifdef __cplusplus
+extern "C" {
+#endif
+
+#include <refsw/nexus_config.h>
+#include <refsw/nxclient.h>
+#include <refsw/nexus_platform_client.h>
+#include <refsw/default_nexus.h>
+extern unsigned int gs_screen_wdt;
+extern unsigned int gs_screen_hgt;
+extern void* gs_native_window;
+
+#ifdef __cplusplus
+}
+#endif
+
+
+#else
 #include <refsw/nexus_config.h>
 #include <refsw/nexus_platform.h>
 #include <refsw/nexus_display.h>
 #include <refsw/nexus_core_utils.h>
 #include <refsw/default_nexus.h>
-
 extern unsigned int gs_screen_wdt;
 extern unsigned int gs_screen_hgt;
-extern void *gs_native_window;
-
+extern void* gs_native_window;
+#endif
 #endif
 
 #ifdef IS_RPI
@@ -177,8 +199,8 @@ void egl_init(EGLDisplay *pdisplay, EGLSurface *psurface, EGLContext *pcontext,
 
         win_info.x = 0;
         win_info.y = 0;
-        win_info.width = gs_screen_wdt;
-        win_info.height = gs_screen_hgt;
+        win_info.width = 1280;
+        win_info.height = 720;
         win_info.stretch = true;
         win_info.clientID = 0; // FIXME hardcoding
 

@@ -30,11 +30,21 @@
 #endif
 
 #ifdef IS_BCM_NEXUS
+
+//#define IS_BCM_NEXUS_CLIENT
+#ifdef IS_BCM_NEXUS_CLIENT
+
+#include <refsw/nexus_config.h>
+#include <refsw/nxclient.h>
+#include <refsw/nexus_platform_client.h>
+#include <refsw/default_nexus.h>
+#else
 #include <refsw/nexus_config.h>
 #include <refsw/nexus_platform.h>
 #include <refsw/nexus_display.h>
 #include <refsw/nexus_core_utils.h>
 #include <refsw/default_nexus.h>
+#endif
 #endif
 
 #ifdef IS_RPI
@@ -131,6 +141,66 @@ static gdl_ret_t setup_plane(gdl_plane_id_t plane) {
 #endif
 
 #ifdef IS_BCM_NEXUS
+
+//#define IS_BCM_NEXUS_CLIENT
+#ifdef IS_BCM_NEXUS_CLIENT
+
+#ifdef __cplusplus
+extern "C" {
+#endif
+
+static NEXUS_DisplayHandle  gs_nexus_display = 0;
+NEXUS_SurfaceClient* gs_native_window = 0;
+//static void* gs_native_window = 0;
+static NXPL_PlatformHandle  nxpl_handle = 0;
+
+static NxClient_AllocResults allocResults;
+
+static unsigned int gs_screen_wdt = 1280;
+static unsigned int gs_screen_hgt = 720;
+
+bool InitPlatform ( void )
+{
+    NxClient_AllocSettings allocSettings;
+    NxClient_JoinSettings joinSettings;
+
+    NxClient_GetDefaultJoinSettings(&joinSettings);
+    snprintf(joinSettings.name, NXCLIENT_MAX_NAME, "%s", "qtbrowser");
+    fprintf(stderr, "NxClient_Join...\n");
+    if (NxClient_Join(&joinSettings))
+    {
+       fprintf(stderr, "Err: NxClient_Join() failed");
+       return false;
+    }
+
+    NxClient_GetDefaultAllocSettings(&allocSettings);
+    allocSettings.surfaceClient = 1;
+    if (NxClient_Alloc(&allocSettings, &allocResults))
+    {
+        fprintf(stderr, "Err: NxClient_Alloc() failed");
+        return false;
+    }
+    else
+    {
+        NXPL_RegisterNexusDisplayPlatform(&nxpl_handle, gs_nexus_display);
+        return true;
+    }
+    return true;
+}
+
+void DeInitPlatform ( void )
+{
+    NXPL_UnregisterNexusDisplayPlatform ( nxpl_handle );
+    NEXUS_SurfaceClient_Release ( gs_native_window );
+    NxClient_Free(&allocResults);
+    NxClient_Uninit();
+}
+
+#ifdef __cplusplus
+}
+#endif
+
+#else
 
 #ifdef __cplusplus
 extern "C" {
@@ -291,7 +361,7 @@ void DeInitPlatform(void) {
 #ifdef __cplusplus
 }
 #endif
-
+#endif
 #endif
 
 typedef struct {
