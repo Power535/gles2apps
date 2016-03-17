@@ -27,7 +27,6 @@
 #endif
 
 #ifdef IS_BCM_NEXUS
-
 //#define IS_BCM_NEXUS_CLIENT
 #ifdef IS_BCM_NEXUS_CLIENT
 #include <refsw/nexus_config.h>
@@ -214,11 +213,13 @@ bool InitPlatform(void) {
             graphics_settings.verticalFilter =
                 NEXUS_GraphicsFilterCoeffs_eBilinear;
 
+            #if 0
             /* Disable blend with video plane */
             graphics_settings.sourceBlendFactor =
                 NEXUS_CompositorBlendFactor_eOne;
             graphics_settings.destBlendFactor =
                 NEXUS_CompositorBlendFactor_eZero;
+            #endif
 
             NEXUS_Display_SetGraphicsSettings(display, &graphics_settings);
 
@@ -544,7 +545,7 @@ void egl_init(EGLDisplay *pdisplay, EGLSurface *psurface, EGLContext *pcontext,
     EGLint config_count;
     EGLint cfg_attribs[] = {EGL_BUFFER_SIZE, EGL_DONT_CARE, EGL_DEPTH_SIZE, 16,
                             EGL_RED_SIZE, 8, EGL_GREEN_SIZE, 8, EGL_BLUE_SIZE,
-                            8,
+                            8, EGL_ALPHA_SIZE, 8,
                             // EGL_SAMPLE_BUFFERS, 1,
                             // EGL_SAMPLES,        4,
                             EGL_RENDERABLE_TYPE, EGL_OPENGL_ES2_BIT, EGL_NONE};
@@ -1045,11 +1046,15 @@ static int init(EGLDisplay display, int argc, char **argv) {
 
     for (j = 0; j < HEIGHT; j++) {
         for (i = 0; i < WIDTH; i++) {
-            if ((i ^ j) & 0x40) {
-                lpTex[0] = lpTex[1] = lpTex[2] = 0x00;
-                lpTex[3] = 0xff;
+            if ((i ^ j) & 0x80) {
+                lpTex[0] = lpTex[2] = lpTex[1] = 0x00;
+                lpTex[3] = 0x00;
+            } else if ((i ^ j) & 0x40) {
+                lpTex[0] = lpTex[1] = lpTex[2] = 0xff;
+                lpTex[3] = 0xdf;
             } else {
-                lpTex[0] = lpTex[1] = lpTex[2] = lpTex[3] = 0xFF;
+                lpTex[0] = lpTex[1] = 0x00; lpTex[2] =  0xff;
+                lpTex[3] = 0xdf;
             }
             lpTex += 4;
         }
@@ -1154,6 +1159,9 @@ static int init(EGLDisplay display, int argc, char **argv) {
 static void render(void) {
     static int framecount = 0;
 
+    glEnable(GL_BLEND);
+    glBlendFunc(GL_SRC_ALPHA, GL_ONE_MINUS_SRC_ALPHA);
+
     glClear(GL_COLOR_BUFFER_BIT);
 
     Identity(projection);
@@ -1164,6 +1172,7 @@ static void render(void) {
 
     glUseProgram(hProgramHandle);
 
+#if 0
     Identity(modelview);
 
     Translate(modelview, 0, 0, -0.5);
@@ -1175,6 +1184,43 @@ static void render(void) {
     MultiplyMatrix(mvp, modelview, projection);
     glUniformMatrix4fv(mvp_pos, 1, GL_FALSE, &mvp[0][0]);
     glDrawArrays(GL_TRIANGLE_FAN, 0, 4);
+#endif
+
+#if 0
+    Identity(modelview);
+
+    Translate(modelview, 0, 0, -0.5);
+
+    Rotate(modelview, 1, 0, 0, framecount / 1.0);
+
+    MultiplyMatrix(mvp, modelview, projection);
+    glUniformMatrix4fv(mvp_pos, 1, GL_FALSE, &mvp[0][0]);
+    glDrawArrays(GL_TRIANGLE_FAN, 0, 4);
+#endif
+
+#if 1
+    Identity(modelview);
+
+    Translate(modelview, 0, 0, -0.5);
+
+    Rotate(modelview, 0, 1, 0, framecount / 1.0);
+
+    MultiplyMatrix(mvp, modelview, projection);
+    glUniformMatrix4fv(mvp_pos, 1, GL_FALSE, &mvp[0][0]);
+    glDrawArrays(GL_TRIANGLE_FAN, 0, 4);
+#endif
+
+#if 0
+    Identity(modelview);
+
+    Translate(modelview, 0, 0, -0.5);
+
+    Rotate(modelview, 0, 0, 1, framecount / 1.0);
+
+    MultiplyMatrix(mvp, modelview, projection);
+    glUniformMatrix4fv(mvp_pos, 1, GL_FALSE, &mvp[0][0]);
+    glDrawArrays(GL_TRIANGLE_FAN, 0, 4);
+#endif
 
     framecount++;
 }
@@ -1280,7 +1326,7 @@ int main(int argc, char **argv) {
     if (init(display, argc, argv) == GL_FALSE)
         goto term;
 
-    glClearColor(0.5, 0.0, 0.0, 1.0);
+    glClearColor(0, 0, 0, 0);
 
     while (!frameStop) {
 
