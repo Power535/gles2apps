@@ -20,8 +20,9 @@
 #endif
 
 #ifdef IS_BCM_NEXUS
-#ifdef PLATFORMSERVER_CLIENT
 //#define IS_BCM_NEXUS_CLIENT
+#define PLATFORMSERVER_CLIENT
+#if defined(PLATFORMSERVER_CLIENT) || defined(IS_BCM_NEXUS_CLIENT)
 #ifdef IS_BCM_NEXUS_CLIENT
 #include <refsw/nxclient.h>
 #endif
@@ -100,7 +101,7 @@ static void destroyDispmanxLayer(EGLNativeWindowType window) {
 
 #ifdef IS_BCM_NEXUS
 
-#ifdef PLATFORMSERVER_CLIENT
+#if defined(PLATFORMSERVER_CLIENT) || defined(IS_BCM_NEXUS_CLIENT)
 
 static NEXUS_DisplayHandle  gs_nexus_display = 0;
 //static NEXUS_SurfaceClient* gs_native_window = 0;

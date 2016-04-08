@@ -27,8 +27,9 @@
 #endif
 
 #ifdef IS_BCM_NEXUS
-#ifdef PLATFORMSERVER_CLIENT
 //#define IS_BCM_NEXUS_CLIENT
+#define PLATFORMSERVER_CLIENT
+#if defined(PLATFORMSERVER_CLIENT) || defined(IS_BCM_NEXUS_CLIENT)
 #ifdef IS_BCM_NEXUS_CLIENT
 #include <refsw/nxclient.h>
 #endif
@@ -51,7 +52,7 @@
 
 #ifdef IS_BCM_NEXUS
 
-#ifdef PLATFORMSERVER_CLIENT
+#if defined(PLATFORMSERVER_CLIENT) || defined(IS_BCM_NEXUS_CLIENT)
 
 static NEXUS_DisplayHandle  gs_nexus_display = 0;
 //static NEXUS_SurfaceClient* gs_native_window = 0;
@@ -1050,7 +1051,7 @@ static int init(EGLDisplay display, int argc, char **argv) {
     for (j = 0; j < HEIGHT; j++) {
         for (i = 0; i < WIDTH; i++) {
             if ((i ^ j) & 0x80) {
-                lpTex[0] = lpTex[2] = lpTex[1] = 0x00;
+                lpTex[0] = lpTex[1] = lpTex[2] = 0x00;
                 lpTex[3] = 0x00;
             } else if ((i ^ j) & 0x40) {
                 lpTex[0] = lpTex[1] = lpTex[2] = 0xff;
@@ -1107,8 +1108,13 @@ static int init(EGLDisplay display, int argc, char **argv) {
                         GL_CLAMP_TO_EDGE);
     } else {
 
+        #if 0
         glTexImage2D(GL_TEXTURE_2D, 0, GL_BGRA_EXT, WIDTH, HEIGHT, 0,
                      GL_BGRA_EXT, GL_UNSIGNED_BYTE, texdata);
+        #else
+        glTexImage2D(GL_TEXTURE_2D, 0, GL_RGBA, WIDTH, HEIGHT, 0,
+                     GL_RGBA, GL_UNSIGNED_BYTE, texdata);
+        #endif
 
         glTexParameterf(GL_TEXTURE_2D, GL_TEXTURE_MIN_FILTER, GL_NEAREST);
         glTexParameterf(GL_TEXTURE_2D, GL_TEXTURE_MAG_FILTER, GL_NEAREST);
@@ -1117,10 +1123,13 @@ static int init(EGLDisplay display, int argc, char **argv) {
     }
 
 #else
-
+    #if 0
     glTexImage2D(GL_TEXTURE_2D, 0, GL_BGRA_EXT, WIDTH, HEIGHT, 0, GL_BGRA_EXT,
                  GL_UNSIGNED_BYTE, texdata);
-
+    #else
+    glTexImage2D(GL_TEXTURE_2D, 0, GL_RGBA, WIDTH, HEIGHT, 0, GL_RGBA,
+                 GL_UNSIGNED_BYTE, texdata);
+    #endif
     glTexParameterf(GL_TEXTURE_2D, GL_TEXTURE_MIN_FILTER, GL_NEAREST);
     glTexParameterf(GL_TEXTURE_2D, GL_TEXTURE_MAG_FILTER, GL_NEAREST);
     glTexParameterf(GL_TEXTURE_2D, GL_TEXTURE_WRAP_S, GL_CLAMP_TO_EDGE);

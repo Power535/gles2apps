@@ -275,10 +275,18 @@ void Texture::Create(float x, float y, float width, float height, int twidth,
 
     glBindTexture(GL_TEXTURE_2D, m_textureid);
 
+    #if 0
     glTexImage2D(GL_TEXTURE_2D, 0, GL_BGRA_EXT, twidth, theight, 0, GL_BGRA_EXT,
                  GL_UNSIGNED_BYTE, NULL);
     glTexSubImage2D(GL_TEXTURE_2D, 0, 0, 0, twidth, theight, GL_BGRA_EXT,
                     GL_UNSIGNED_BYTE, m_texdata);
+    #else
+    glTexImage2D(GL_TEXTURE_2D, 0, GL_RGBA, twidth, theight, 0, GL_RGBA,
+                 GL_UNSIGNED_BYTE, NULL);
+    glTexSubImage2D(GL_TEXTURE_2D, 0, 0, 0, twidth, theight, GL_RGBA,
+                    GL_UNSIGNED_BYTE, m_texdata);
+    #endif
+
 
     glTexParameterf(GL_TEXTURE_2D, GL_TEXTURE_MIN_FILTER, GL_NEAREST);
     glTexParameterf(GL_TEXTURE_2D, GL_TEXTURE_MAG_FILTER, GL_NEAREST);

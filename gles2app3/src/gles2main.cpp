@@ -30,8 +30,9 @@
 #endif
 
 #ifdef IS_BCM_NEXUS
-#ifdef PLATFORMSERVER_CLIENT
 //#define IS_BCM_NEXUS_CLIENT
+#define PLATFORMSERVER_CLIENT
+#if defined(PLATFORMSERVER_CLIENT) || defined(IS_BCM_NEXUS_CLIENT)
 #ifdef IS_BCM_NEXUS_CLIENT
 #include <refsw/nxclient.h>
 #endif
@@ -142,7 +143,7 @@ static gdl_ret_t setup_plane(gdl_plane_id_t plane) {
 
 #ifdef IS_BCM_NEXUS
 
-#ifdef PLATFORMSERVER_CLIENT
+#if defined(PLATFORMSERVER_CLIENT) || defined(IS_BCM_NEXUS_CLIENT)
 
 #ifdef __cplusplus
 extern "C" {

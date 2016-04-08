@@ -22,16 +22,19 @@
 
 
 #ifdef IS_BCM_NEXUS
-
 //#define IS_BCM_NEXUS_CLIENT
-#ifdef IS_BCM_NEXUS_CLIENT
+#define PLATFORMSERVER_CLIENT
+#if defined(PLATFORMSERVER_CLIENT) || defined(IS_BCM_NEXUS_CLIENT)
 
 #ifdef __cplusplus
 extern "C" {
 #endif
 
-#include <refsw/nexus_config.h>
+#ifdef IS_BCM_NEXUS_CLIENT
 #include <refsw/nxclient.h>
+#endif
+
+#include <refsw/nexus_config.h>
 #include <refsw/nexus_platform_client.h>
 #include <refsw/default_nexus.h>
 extern unsigned int gs_screen_wdt;
