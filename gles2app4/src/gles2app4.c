@@ -1,11 +1,8 @@
-#include <fcntl.h>
 #include <linux/fb.h>
 #include <math.h>
-#include <signal.h>
 #include <stdio.h>
 #include <stdlib.h>
 #include <string.h>
-#include <sys/ioctl.h>
 
 #include <EGL/egl.h>
 #include <EGL/eglext.h>
@@ -152,24 +149,19 @@ void InitHDMIOutput(NEXUS_DisplayHandle display) {
   if (platform_config.outputs.hdmi[0]) {
     NEXUS_Display_AddOutput(display, NEXUS_HdmiOutput_GetVideoConnector(
                                          platform_config.outputs.hdmi[0]));
-
     /* Install hotplug callback -- video only for now */
     NEXUS_HdmiOutput_GetSettings(platform_config.outputs.hdmi[0],
                                  &hdmiSettings);
-
     hdmiSettings.hotplugCallback.callback = hotplug_callback;
     hdmiSettings.hotplugCallback.context = platform_config.outputs.hdmi[0];
     hdmiSettings.hotplugCallback.param = (int)display;
-
     NEXUS_HdmiOutput_SetSettings(platform_config.outputs.hdmi[0],
                                  &hdmiSettings);
-
     /* Force a hotplug to switch to a supported format if necessary */
     hotplug_callback(platform_config.outputs.hdmi[0], (int)display);
   }
 
 #else
-
   UNUSED(display);
 
 #endif
@@ -180,14 +172,10 @@ bool InitPlatform(void) {
   NEXUS_Error err;
 
   NEXUS_PlatformSettings platform_settings;
-
-  /* Initialise the Nexus platform */
   NEXUS_Platform_GetDefaultSettings(&platform_settings);
   platform_settings.openFrontend = false;
 
-  /* Initialise the Nexus platform */
   err = NEXUS_Platform_Init(&platform_settings);
-
   if (err) {
     printf("Err: NEXUS_Platform_Init() failed\n");
     succeeded = false;
@@ -213,24 +201,20 @@ bool InitPlatform(void) {
       graphics_settings.verticalFilter = NEXUS_GraphicsFilterCoeffs_eBilinear;
 
 #if 0
-            /* Disable blend with video plane */
-            graphics_settings.sourceBlendFactor =
-                NEXUS_CompositorBlendFactor_eOne;
-            graphics_settings.destBlendFactor =
-                NEXUS_CompositorBlendFactor_eZero;
+      /* Disable blend with video plane */
+      graphics_settings.sourceBlendFactor =
+          NEXUS_CompositorBlendFactor_eOne;
+      graphics_settings.destBlendFactor =
+          NEXUS_CompositorBlendFactor_eZero;
 #endif
 
       NEXUS_Display_SetGraphicsSettings(display, &graphics_settings);
-
       InitHDMIOutput(display);
-
       NEXUS_Display_GetSettings(display, &display_settings);
       NEXUS_VideoFormat_GetInfo(display_settings.format, &video_format_info);
-
       gs_nexus_display = display;
       gs_screen_wdt = video_format_info.width;
       gs_screen_hgt = video_format_info.height;
-
       printf("Screen width %d, Screen height %d\n", gs_screen_wdt,
              gs_screen_hgt);
     }
@@ -248,12 +232,11 @@ void DeInitPlatform(void) {
 
   if (gs_nexus_display != 0) {
     NXPL_UnregisterNexusDisplayPlatform(nxpl_handle);
-    // NEXUS_SurfaceClient_Release ( gs_native_window );
+    // NEXUS_SurfaceClient_Release(gs_native_window);
   }
   NEXUS_Platform_Uninit();
 }
 #endif
-
 #endif
 
 #ifdef IS_RPI
@@ -313,23 +296,6 @@ static void destroyDispmanxLayer(EGLNativeWindowType window) {
 
 #endif
 
-#ifdef MALI400
-
-#define UMP
-
-#define MALI_USE_DMA_BUF 0
-#include <EGL/fbdev_window.h>
-#include <ump/ump_ref_drv.h>
-
-#else
-
-typedef struct fbdev_window {
-  unsigned short width;
-  unsigned short height;
-} fbdev_window;
-
-#endif
-
 #ifdef IS_INTELCE
 static void egl_init(EGLDisplay *pdisplay, EGLSurface *psurface,
                      EGLContext *pcontext, int width, int height,
@@ -352,99 +318,6 @@ static void egl_init(EGLDisplay *pdisplay, EGLSurface *psurface,
       exit(1);                                                               \
     }                                                                        \
   }
-
-static fbdev_window window;
-
-#define WIDTH 1280
-#define HEIGHT 720
-#define BPP 4
-
-GLubyte texdata[WIDTH * HEIGHT * BPP];
-
-#ifdef UMP
-
-fbdev_pixmap *create_pixmap_ump(int width, int height, int red, int green,
-                                int blue, int alpha, int luminance, int ump,
-                                int yuv) {
-  int use_ump = ump;
-  int size;
-  fbdev_pixmap *pixmap;
-
-  pixmap = malloc(sizeof(fbdev_pixmap));
-
-  if (NULL == pixmap) {
-    return NULL;
-  }
-
-  pixmap->flags = 0;
-  pixmap->width = width;
-  pixmap->height = height;
-  pixmap->red_size = red;
-  pixmap->green_size = green;
-  pixmap->blue_size = blue;
-  pixmap->alpha_size = alpha;
-  pixmap->luminance_size = luminance;
-  pixmap->buffer_size =
-      (pixmap->red_size + pixmap->green_size + pixmap->blue_size +
-       pixmap->alpha_size + pixmap->luminance_size);
-  pixmap->bytes_per_pixel = pixmap->buffer_size / 8;
-  pixmap->format = 0;
-  size = pixmap->width * pixmap->height * pixmap->bytes_per_pixel;
-
-  if (yuv) {
-    pixmap->flags = 0;
-    pixmap->width = width;
-    pixmap->height = height;
-    pixmap->red_size = 0;
-    pixmap->green_size = 0;
-    pixmap->blue_size = 0;
-    pixmap->alpha_size = 0;
-    pixmap->luminance_size = 8;
-    pixmap->buffer_size =
-        (pixmap->red_size + pixmap->green_size + pixmap->blue_size +
-         pixmap->alpha_size + pixmap->luminance_size);
-    pixmap->bytes_per_pixel = (pixmap->buffer_size + 7) / 8;
-    pixmap->format = 0x30F4 /*EGL_YUV422I_KHR*/;
-    size = pixmap->width * pixmap->height * 2;
-  }
-
-  if (1 == use_ump) {
-    pixmap->flags = FBDEV_PIXMAP_SUPPORTS_UMP;
-
-#if 0
-        pixmap->data = ump_handle_create_from_secure_id(secure_id);
-#else
-    if (UMP_OK != ump_open()) {
-      printf("%s: unable to open UMP interface\n", __func__);
-      return NULL;
-    }
-
-    printf("%s: about to allocate YUV pixmap\n", __func__);
-    pixmap->data = ump_ref_drv_allocate(size, UMP_REF_DRV_CONSTRAINT_NONE);
-    if (UMP_INVALID_MEMORY_HANDLE == pixmap->data) {
-      printf("%s: unable to allocate from UMP interface\n", __func__);
-      ump_close();
-      return NULL;
-    }
-
-    ump_write(pixmap->data, 0, texdata, size);
-    printf("%s: create ump buffer\n", __func__);
-#endif
-
-  } else {
-    pixmap->data = malloc(size);
-    if (NULL == pixmap->data) {
-      free(pixmap);
-      return NULL;
-    }
-
-    memcpy(pixmap->data, texdata, size);
-  }
-
-  return pixmap;
-}
-
-#endif
 
 static const char *const error_strings[] = {
     "EGL_SUCCESS",       "EGL_NOT_INITIALIZED",     "EGL_BAD_ACCESS",
@@ -558,12 +431,6 @@ void egl_init(EGLDisplay *pdisplay, EGLSurface *psurface, EGLContext *pcontext,
   if (eRetStatus != EGL_TRUE || !config_count)
     handle_egl_error("eglChooseConfig");
 
-  if (strstr(eglQueryString(display, EGL_VENDOR), "ARM")) {
-    window.width = width;
-    window.height = height;
-    surface = eglCreateWindowSurface(display, configs[0],
-                                     (EGLNativeWindowType)&window, NULL);
-  }
 #ifdef IS_INTELCE
   else if (strstr(eglQueryString(display, EGL_VENDOR), "Intel")) {
     surface = eglCreateWindowSurface(display, configs[0],
@@ -884,372 +751,32 @@ void Rotate(float pMatrix[4][4], float fX, float fY, float fZ, float fAngle) {
   MultiplyMatrix(pMatrix, afMatrix, pMatrix);
 }
 
-static int frameStop = 0;
-
-static int mvp_pos;
 static int hProgramHandle;
-static int position_attriblocation;
-static int inputtexcoord_attriblocation;
-
-static GLfloat projection[4][4] = {
-    {1, 0, 0, 0}, {0, 1, 0, 0}, {0, 0, 1, 0}, {0, 0, 0, 1}};
-static GLfloat modelview[4][4] = {
-    {1, 0, 0, 0}, {0, 1, 0, 0}, {0, 0, 1, 0}, {0, 0, 0, 1}};
-static GLfloat mvp[4][4] = {
-    {1, 0, 0, 0}, {0, 1, 0, 0}, {0, 0, 1, 0}, {0, 0, 0, 1}};
-
-#define FLOAT_TO_FIXED(x) (long)((x)*65536.0f)
-
-static void signal_handler(int sig_num) {
-  if (sig_num == SIGINT || sig_num == SIGTERM || sig_num == SIGHUP) {
-    frameStop = 1;
-  }
-}
+static int attriblocation;
 
 static const char *const vertShader =
     "\n\
-varying vec2 texcoord;                                          \n\
-                                                                \n\
-attribute vec4 position;                                        \n\
-attribute vec2 inputtexcoord;                                   \n\
-                                                                \n\
-uniform mat4 mvp;                                               \n\
-                                                                \n\
-void main(void)                                                 \n\
-{                                                               \n\
-    texcoord = inputtexcoord;                                   \n\
-                                                                \n\
-    gl_Position = mvp * position;                               \n\
-                                                                \n\
-    gl_Position.z = gl_Position.w;                              \n\
-}                                                               \n";
+attribute vec4 position;              \n\
+void main(void)                       \n\
+{                                     \n\
+  gl_Position = position;             \n\
+}                                     \n";
 
 static const char *const fragShader =
     "\n\
-varying highp vec2 texcoord;                                    \n\
-                                                                \n\
-uniform sampler2D basetexture;                                  \n\
-                                                                \n\
-void main(void)                                                 \n\
-{                                                               \n\
-    gl_FragColor = texture2D(basetexture, texcoord);            \n\
-}                                                               \n";
-
-static const char *const fragShader_uyvy =
-    "\n\
-precision mediump float;                                        \n\
-varying highp vec2 texcoord;                                    \n\
-                                                                \n\
-uniform sampler2D basetexture;                                  \n\
-                                                                \n\
-void main(void)                                                 \n\
-{                                                               \n\
-    float sub = 0.0;                                            \n\
-    if (gl_FragCoord.x > 512.0) sub = 512.5;                    \n\
-                                                                \n\
-    vec4 UYVY = texture2D(basetexture, texcoord);               \n\
-                                                                \n\
-    float xodd = mod(floor(gl_FragCoord.x - sub), 2.0);         \n\
-    float Y;                                                    \n\
-    float Cb = UYVY.z;                                          \n\
-    float Cr = UYVY.x;                                          \n\
-                                                                \n\
-    Y = (UYVY.w * xodd) + (UYVY.y * (1.0 - xodd));              \n\
-                                                                \n\
-    gl_FragColor.rgb = Y * 1.164 + vec3( -0.87075, 0.53825, -1.08 ) + Cr * vec3( 1.596, -0.398, 0.0 ) + Cb * vec3( 0.0, -0.831, 2.018 );  \n\
-                                                                \n\
-    gl_FragColor.a = 1.0;                                       \n\
-}                                                               \n";
-
-static const char *const fragShader_oes =
-    "\n\
-#extension GL_OES_EGL_image_external : require                  \n\
-precision mediump float;                                        \n\
-varying vec2 texcoord;                                          \n\
-                                                                \n\
-uniform samplerExternalOES basetexture;                         \n\
-                                                                \n\
-void main(void)                                                 \n\
-{                                                               \n\
-    gl_FragColor = texture2D(basetexture, texcoord);            \n\
-}                                                               \n";
-
-// TRIANGLE
-#if 0
-    static GLfixed vertices[] = {
-
-        FLOAT_TO_FIXED(-0.5),   FLOAT_TO_FIXED(-0.5),
-        FLOAT_TO_FIXED( 0),     FLOAT_TO_FIXED( 0.5),
-        FLOAT_TO_FIXED( 0.5),   FLOAT_TO_FIXED(-0.5),
-    };
-
-    static GLfloat texcoord[] = {
-
-        0.0, 0.0,
-        1.0, 0.0,
-        1.0, 1.0
-    };
-#endif
-
-// TRIANGLE STRIP
-#if 0
-    static GLfixed vertices[] = {
-
-        FLOAT_TO_FIXED(-0.5),   FLOAT_TO_FIXED(-0.5),
-        FLOAT_TO_FIXED( 0.5),   FLOAT_TO_FIXED(-0.5),
-        FLOAT_TO_FIXED(-0.5),   FLOAT_TO_FIXED( 0.5),
-        FLOAT_TO_FIXED( 0.5),   FLOAT_TO_FIXED( 0.5),
-    };
-
-    static GLfloat texcoord[] = {
-
-        0.0, 1.0,
-        1.0, 1.0,
-        0.0, 0.0,
-        1.0, 0.0
-    };
-#endif
-
-// TRIANGLE FAN
-#if 1
-
-static GLfixed vertices[] = {
-
-    FLOAT_TO_FIXED(0.5),  FLOAT_TO_FIXED(-0.5), FLOAT_TO_FIXED(-0.5),
-    FLOAT_TO_FIXED(-0.5), FLOAT_TO_FIXED(-0.5), FLOAT_TO_FIXED(0.5),
-    FLOAT_TO_FIXED(0.5),  FLOAT_TO_FIXED(0.5),
-
-};
-
-static GLfloat texcoord[] = {
-
-    1.0, 1.0, 0.0, 1.0, 0.0,
-    0.0, 1.0, 0.0
-
-};
-#endif
-
-GLuint tex_id;
-
-
-static int init(EGLDisplay display, int argc, char **argv) {
-  GLubyte *lpTex = texdata;
-  GLuint i, j;
-  char pszInfoLog[1024];
-  int nShaderStatus, nInfoLogLength;
-  int hShaderHandle[3];
-
-  EGLNativePixmapType pixmap;
-
-  for (j = 0; j < HEIGHT; j++) {
-    for (i = 0; i < WIDTH; i++) {
-      if ((i ^ j) & 0x80) {
-        lpTex[0] = lpTex[1] = lpTex[2] = 0x00;
-        lpTex[3] = 0x00;
-      } else if ((i ^ j) & 0x40) {
-        lpTex[0] = lpTex[1] = lpTex[2] = 0xff;
-        lpTex[3] = 0xdf;
-      } else {
-        lpTex[0] = lpTex[1] = 0x00;
-        lpTex[2] = 0xff;
-        lpTex[3] = 0xdf;
-      }
-      lpTex += 4;
-    }
-  }
-
-  if (argc > 1) {
-    FILE *fs;
-    size_t result;
-    fs = fopen(argv[1], "r");
-    lpTex = texdata;
-    if (fs) {
-      result = fread(lpTex, 1, 1280 * 720 * 2, fs);
-      fclose(fs);
-    }
-  }
-
-#ifdef UMP
-  EGLImageKHR egl_image;
-
-  if (argv[1] && strstr(argv[1], "uyvy")) {
-    pixmap = (EGLNativePixmapType)create_pixmap_ump(WIDTH, HEIGHT, 8, 8, 8, 8,
-                                                    0, 1, 1);
-    if (pixmap == NULL) printf("create ump pixmap failed\n");
-
-    EGL_CHECK(egl_image = (EGLImageKHR)eglCreateImageKHR(
-                  display, EGL_NO_CONTEXT, EGL_NATIVE_PIXMAP_KHR,
-                  (EGLClientBuffer)pixmap, NULL));
-    if (egl_image == NULL) printf("create egl image failed\n");
-
-    glGenTextures(1, &tex_id);
-    glBindTexture(GL_TEXTURE_EXTERNAL_OES, tex_id);
-    glEGLImageTargetTexture2DOES(GL_TEXTURE_EXTERNAL_OES, egl_image);
-    glActiveTexture(GL_TEXTURE0);
-    glBindTexture(GL_TEXTURE_EXTERNAL_OES, tex_id);
-
-    glTexParameterf(GL_TEXTURE_EXTERNAL_OES, GL_TEXTURE_MIN_FILTER, GL_NEAREST);
-    glTexParameterf(GL_TEXTURE_EXTERNAL_OES, GL_TEXTURE_MAG_FILTER, GL_NEAREST);
-    glTexParameterf(GL_TEXTURE_EXTERNAL_OES, GL_TEXTURE_WRAP_S,
-                    GL_CLAMP_TO_EDGE);
-    glTexParameterf(GL_TEXTURE_EXTERNAL_OES, GL_TEXTURE_WRAP_T,
-                    GL_CLAMP_TO_EDGE);
-  } else {
-#if 0
-        glTexImage2D(GL_TEXTURE_2D, 0, GL_BGRA_EXT, WIDTH, HEIGHT, 0,
-                     GL_BGRA_EXT, GL_UNSIGNED_BYTE, texdata);
-#else
-    glTexImage2D(GL_TEXTURE_2D, 0, GL_RGBA, WIDTH, HEIGHT, 0, GL_RGBA,
-                 GL_UNSIGNED_BYTE, texdata);
-#endif
-
-    glTexParameterf(GL_TEXTURE_2D, GL_TEXTURE_MIN_FILTER, GL_NEAREST);
-    glTexParameterf(GL_TEXTURE_2D, GL_TEXTURE_MAG_FILTER, GL_NEAREST);
-    glTexParameterf(GL_TEXTURE_2D, GL_TEXTURE_WRAP_S, GL_CLAMP_TO_EDGE);
-    glTexParameterf(GL_TEXTURE_2D, GL_TEXTURE_WRAP_T, GL_CLAMP_TO_EDGE);
-  }
-
-#else
-#if 0
-    glTexImage2D(GL_TEXTURE_2D, 0, GL_BGRA_EXT, WIDTH, HEIGHT, 0, GL_BGRA_EXT,
-                 GL_UNSIGNED_BYTE, texdata);
-#else
-  glGenTextures(1, &tex_id);
-  glBindTexture(GL_TEXTURE_2D, tex_id);
-  glTexImage2D(GL_TEXTURE_2D, 0, GL_RGBA, WIDTH, HEIGHT, 0, GL_RGBA,
-               GL_UNSIGNED_BYTE, texdata);
-#endif
-  glTexParameterf(GL_TEXTURE_2D, GL_TEXTURE_MIN_FILTER, GL_NEAREST);
-  glTexParameterf(GL_TEXTURE_2D, GL_TEXTURE_MAG_FILTER, GL_NEAREST);
-  glTexParameterf(GL_TEXTURE_2D, GL_TEXTURE_WRAP_S, GL_CLAMP_TO_EDGE);
-  glTexParameterf(GL_TEXTURE_2D, GL_TEXTURE_WRAP_T, GL_CLAMP_TO_EDGE);
-
-#endif
-
-  if (argv[1] && strstr(argv[1], "uyvy")) {
-#ifdef UMP
-    hProgramHandle = create_program(vertShader, fragShader_oes);
-#else
-    hProgramHandle = create_program(vertShader, fragShader_uyvy);
-#endif
-  } else {
-    hProgramHandle = create_program(vertShader, fragShader);
-  }
-
-  mvp_pos = glGetUniformLocation(hProgramHandle, "mvp");
-
-  glUseProgram(hProgramHandle);
-
-  j = glGetError();
-  if (j != GL_NO_ERROR) {
-    printf("GL ERROR = %x\n", j);
-    return GL_FALSE;
-  }
-
-  position_attriblocation = glGetAttribLocation(hProgramHandle, "position");
-  glEnableVertexAttribArray(position_attriblocation);
-  glVertexAttribPointer(position_attriblocation, 2, GL_FIXED, 0, 0, vertices);
-
-  inputtexcoord_attriblocation =
-      glGetAttribLocation(hProgramHandle, "inputtexcoord");
-  glEnableVertexAttribArray(inputtexcoord_attriblocation);
-  glVertexAttribPointer(inputtexcoord_attriblocation, 2, GL_FLOAT, 0, 0,
-                        texcoord);
-
-  return GL_TRUE;
-}
-
-static void render(void) {
-  static int framecount = 0;
-
-  glEnable(GL_BLEND);
-  glBlendFunc(GL_SRC_ALPHA, GL_ONE_MINUS_SRC_ALPHA);
-
-  glClear(GL_COLOR_BUFFER_BIT);
-
-  Identity(projection);
-
-  // Orthographic(projection, -0.5f, 0.5f, -0.5f, 0.5f, 0.5f, -0.5f);
-
-  Perspective(projection, 90, 1, 0, 1);
-
-  glUseProgram(hProgramHandle);
-
-#if 0
-    Identity(modelview);
-
-    Translate(modelview, 0, 0, -0.5);
-
-    Rotate(modelview, 1, 0, 0, framecount / 1.0);
-    Rotate(modelview, 0, 1, 0, framecount / 1.0);
-    Rotate(modelview, 0, 0, 1, framecount / 1.0);
-
-    MultiplyMatrix(mvp, modelview, projection);
-    glUniformMatrix4fv(mvp_pos, 1, GL_FALSE, &mvp[0][0]);
-    glDrawArrays(GL_TRIANGLE_FAN, 0, 4);
-#endif
-
-#if 0
-    Identity(modelview);
-
-    Translate(modelview, 0, 0, -0.5);
-
-    Rotate(modelview, 1, 0, 0, framecount / 1.0);
-
-    MultiplyMatrix(mvp, modelview, projection);
-    glUniformMatrix4fv(mvp_pos, 1, GL_FALSE, &mvp[0][0]);
-    glDrawArrays(GL_TRIANGLE_FAN, 0, 4);
-#endif
-
-#if 1
-  Identity(modelview);
-
-  Translate(modelview, 0, 0, -0.5);
-
-  Rotate(modelview, 0, 1, 0, framecount / 1.0);
-
-  MultiplyMatrix(mvp, modelview, projection);
-  glUniformMatrix4fv(mvp_pos, 1, GL_FALSE, &mvp[0][0]);
-
-  glBindTexture(GL_TEXTURE_2D, tex_id);
-
-  glEnableVertexAttribArray(position_attriblocation);
-  glVertexAttribPointer(position_attriblocation, 2, GL_FIXED, 0, 0, vertices);
-
-  glEnableVertexAttribArray(inputtexcoord_attriblocation);
-  glVertexAttribPointer(inputtexcoord_attriblocation, 2, GL_FLOAT, 0, 0,
-                        texcoord);
-
-  glDrawArrays(GL_TRIANGLE_FAN, 0, 4);
-#endif
-
-#if 0
-    Identity(modelview);
-
-    Translate(modelview, 0, 0, -0.5);
-
-    Rotate(modelview, 0, 0, 1, framecount / 1.0);
-
-    MultiplyMatrix(mvp, modelview, projection);
-    glUniformMatrix4fv(mvp_pos, 1, GL_FALSE, &mvp[0][0]);
-    glDrawArrays(GL_TRIANGLE_FAN, 0, 4);
-#endif
-
-  framecount++;
-}
-
-static int handle_events(void) { return 0; }
+void main(void)                       \n\
+{                                     \n\
+  gl_FragColor = vec4(1,0,0,1);       \n\
+}                                     \n";
 
 int create_program(const char *v, const char *f) {
   char pszInfoLog[1024];
   int nShaderStatus, nInfoLogLength;
 
-  //
   int vertshaderhandle = glCreateShader(GL_VERTEX_SHADER);
   int fragshaderhandle = glCreateShader(GL_FRAGMENT_SHADER);
   int programhandle = glCreateProgram();
 
-  //
   char *pszProgramString0 = (char *)v;
   int nProgramLength0 = strlen(v);
   glShaderSource(vertshaderhandle, 1, (const char **)&pszProgramString0,
@@ -1263,7 +790,6 @@ int create_program(const char *v, const char *f) {
   }
   glAttachShader(programhandle, vertshaderhandle);
 
-  //
   char *pszProgramString1 = (char *)f;
   int nProgramLength1 = strlen(f);
   glShaderSource(fragshaderhandle, 1, (const char **)&pszProgramString1,
@@ -1296,6 +822,9 @@ int create_program(const char *v, const char *f) {
   return programhandle;
 }
 
+static void init(EGLDisplay display, int argc, char **argv);
+static void render(void);
+
 int main(int argc, char **argv) {
   int i;
 
@@ -1303,16 +832,7 @@ int main(int argc, char **argv) {
   EGLSurface surface;
   EGLContext context;
 
-  int fbdev;
-
   struct fb_var_screeninfo varInfo;
-
-  if ((fbdev = open("/dev/fb0", O_RDONLY)) == 0) {
-    printf("Error opening %s, ignoring\n", "/dev/fb0");
-  } else if (ioctl(fbdev, FBIOGET_VSCREENINFO, &varInfo) < 0) {
-    printf("Error fbdev ioctl, ignoring\n");
-    close(fbdev);
-  }
 
 #ifdef IS_INTELCE
   gdl_plane_id_t plane = GDL_PLANE_ID_UPP_C;
@@ -1332,22 +852,15 @@ int main(int argc, char **argv) {
   egl_init(&display, &surface, &context, varInfo.xres, varInfo.yres);
 #endif
 
-  signal(SIGINT, &signal_handler);
-  signal(SIGTERM, &signal_handler);
-  signal(SIGHUP, &signal_handler);
+  init(display, argc, argv);
 
-  if (init(display, argc, argv) == GL_FALSE) goto term;
-
-  glClearColor(0, 0, 0, 0);
-
-  while (!frameStop) {
+  glClearColor(1, 1, 1, 1);
+  while (1) {
     render();
-
     egl_swap(display, surface);
   }
 
 term:
-
   egl_exit(display, surface, context);
 
 #ifdef IS_INTELCE
@@ -1363,4 +876,84 @@ term:
 #endif
 
   return 0;
+}
+
+//  triangle_fan
+//  2 components per vertex attribute : x,y
+//
+//            _____
+//           |\    |
+//  3 ___ 4  | \   |
+//   |\  |   |  \  |
+//   | \ |   |   \ |
+//  2|__\|1  |____\|
+//
+//    x   y
+//    1  -1  1 (right bottom)
+//   -1  -1  2 (left  bottom)
+//   -1   1  3 (left  top   )
+//    1   1  4 (right top   )
+//
+
+GLuint vbo;
+
+#define FLOAT_TO_FIXED(x) (long)((x) * (65536.0f / 1))
+
+static GLfixed vertices[360 * 2 * 2] = {
+};
+
+static void init(EGLDisplay display, int argc, char **argv) {
+  hProgramHandle = create_program(vertShader, fragShader);
+
+  glEnable(GL_BLEND);
+  glBlendFunc(GL_SRC_ALPHA, GL_ONE_MINUS_SRC_ALPHA);
+
+  glGenBuffers(1, &vbo);
+  glBindBuffer(GL_ARRAY_BUFFER, vbo);
+
+  srand(time(NULL));
+
+  GLfixed *v = vertices;
+
+  int i;
+  for (i = 0; i < 360; i++) {
+
+    *v++ = FLOAT_TO_FIXED(-1.0 + ((i*3) / 540.0));
+    *v++ = FLOAT_TO_FIXED(-1.0 + 0.0);
+
+    *v++ = FLOAT_TO_FIXED(-1.0 + (((i*3) + 3) / 540.0));
+    *v++ = FLOAT_TO_FIXED(-1.0 + 0.0);
+  }
+
+  glBufferData(GL_ARRAY_BUFFER, sizeof(vertices), vertices, GL_DYNAMIC_DRAW);
+  glBindBuffer(GL_ARRAY_BUFFER, 0);
+
+  attriblocation = glGetAttribLocation(hProgramHandle, "position");
+}
+
+static void render(void) {
+  glClear(GL_COLOR_BUFFER_BIT);
+
+  glUseProgram(hProgramHandle);
+
+  glBindBuffer(GL_ARRAY_BUFFER, vbo);
+
+  GLfixed *v = vertices;
+
+  int i;
+  for(i=0; i < 359;i++){
+    v[1] = v[5];
+    v[3] = v[7];
+    v+=4;
+  }
+  float r = rand() / (float)RAND_MAX;
+  v[1] = v[3] = FLOAT_TO_FIXED(-1.0 + r * 0.9);
+
+  glBufferSubData(GL_ARRAY_BUFFER, 0, sizeof(vertices), vertices);
+
+  glEnableVertexAttribArray(attriblocation);
+  glVertexAttribPointer(attriblocation, 2, GL_FIXED, 0, 0, 0);
+
+  glDrawArrays(GL_LINE_STRIP, 0, 360 * 2);
+  glBindBuffer(GL_ARRAY_BUFFER, 0);
 }

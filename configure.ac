@@ -69,6 +69,7 @@ AC_CONFIG_FILES([
     gles2app1/src/Makefile
     gles2app2/src/Makefile
     gles2app3/src/Makefile
+    gles2app4/src/Makefile
 ])
 
 AC_OUTPUT

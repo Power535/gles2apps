@@ -297,14 +297,10 @@ void Texture::Create(float x, float y, float width, float height, int twidth,
 
     glBindAttribLocation(m_programhandle, 0, "position");
     glBindAttribLocation(m_programhandle, 1, "inputtexcoord");
-
-    j = glGetError();
-    if (j != GL_NO_ERROR) {
-        printf("GL ERROR = %x", j);
-    }
 }
 
 void Texture::Draw() {
+    GLenum err;
     GLfloat modelview[4][4] = {
         {1, 0, 0, 0}, {0, 1, 0, 0}, {0, 0, 1, 0}, {0, 0, 0, 1}};
     GLfloat projection[4][4] = {
@@ -326,12 +322,14 @@ void Texture::Draw() {
     Orthographic(projection, 0.0f, 1.0f, 0.0f, 1.0f, 0.0f, 1.0f);
     MultiplyMatrix(mvp, modelview, projection);
 
+    glUseProgram(m_programhandle);
     m_mvp_pos = glGetUniformLocation(m_programhandle, "mvp");
     glUniformMatrix4fv(m_mvp_pos, 1, GL_FALSE, &mvp[0][0]);
 
     m_attriblocation_position =
         glGetAttribLocation(m_programhandle, "position");
     glEnableVertexAttribArray(m_attriblocation_position);
+
     if (m_usebuffers) {
         glBindBuffer(GL_ARRAY_BUFFER, m_e_vertsbuffer);
         glVertexAttribPointer(m_attriblocation_position, 3, GL_FLOAT, 0, 0, 0);
