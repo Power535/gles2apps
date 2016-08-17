@@ -21,7 +21,7 @@
 
 #ifdef IS_BCM_NEXUS
 //#define IS_BCM_NEXUS_CLIENT
-//#define PLATFORMSERVER_CLIENT
+#define PLATFORMSERVER_CLIENT
 #if defined(PLATFORMSERVER_CLIENT) || defined(IS_BCM_NEXUS_CLIENT)
 #ifdef IS_BCM_NEXUS_CLIENT
 #include <refsw/nxclient.h>

@@ -149,7 +149,7 @@ void Texture::Create(float x, float y, float width, float height, int twidth,
     int pngwidth;
     int pngheight;
 
-    if (read_png_file(filename, (char **)&m_texdata, &pngwidth, &pngheight) !=
+    if (read_png_file(filename, (char **)&m_texdata_rgba, &pngwidth, &pngheight) !=
         -1) {
 
         if (m_width == 0) {
@@ -162,24 +162,35 @@ void Texture::Create(float x, float y, float width, float height, int twidth,
 
     } else {
 
-        m_texdata = (GLubyte *)malloc(twidth * theight * 4);
+        m_texdata_rgba = (GLubyte *)malloc(twidth * theight * 4);
+        m_texdata_bgra = (GLubyte *)malloc(twidth * theight * 4);
 
-        GLubyte *lpTex = m_texdata;
+        GLubyte *lpTex_rgba = m_texdata_rgba;
+        GLubyte *lpTex_bgra = m_texdata_bgra;
         for (j = 0; j < theight; j++) {
             for (i = 0; i < twidth; i++) {
-                if ((i ^ j) & 0x8) {
-                    lpTex[0] = 0x00;
-                    lpTex[1] = 0x80;
-                    lpTex[2] = 0x00;
+                if ((i ^ j) & 0x40) {
+                    lpTex_rgba[0] = lpTex_rgba[1] = lpTex_rgba[2] = 0x00;
+                    lpTex_rgba[3] = 0x00;
+                } else if ((i ^ j) & 0x20) {
+                    lpTex_rgba[0] = lpTex_rgba[1] = lpTex_rgba[2] = 0xff;
+                    lpTex_rgba[3] = 0xdf;
                 } else {
-                    lpTex[0] = 0x80;
-                    lpTex[1] = 0x00;
-                    lpTex[2] = 0x00;
+                    lpTex_rgba[0] = lpTex_rgba[1] = 0x00;
+                    lpTex_rgba[2] = 0xff;
+                    lpTex_rgba[3] = 0xdf;
                 }
-                lpTex[3] = 0xff;
-                lpTex += 4;
+
+                lpTex_bgra[0] = lpTex_rgba[2];
+                lpTex_bgra[1] = lpTex_rgba[1];
+                lpTex_bgra[2] = lpTex_rgba[0];
+                lpTex_bgra[3] = lpTex_rgba[3];
+
+                lpTex_rgba += 4;
+                lpTex_bgra += 4;
             }
         }
+
     }
 
     /*
@@ -279,12 +290,12 @@ void Texture::Create(float x, float y, float width, float height, int twidth,
     glTexImage2D(GL_TEXTURE_2D, 0, GL_BGRA_EXT, twidth, theight, 0, GL_BGRA_EXT,
                  GL_UNSIGNED_BYTE, NULL);
     glTexSubImage2D(GL_TEXTURE_2D, 0, 0, 0, twidth, theight, GL_BGRA_EXT,
-                    GL_UNSIGNED_BYTE, m_texdata);
+                    GL_UNSIGNED_BYTE, m_texdata_bgra);
     #else
     glTexImage2D(GL_TEXTURE_2D, 0, GL_RGBA, twidth, theight, 0, GL_RGBA,
                  GL_UNSIGNED_BYTE, NULL);
     glTexSubImage2D(GL_TEXTURE_2D, 0, 0, 0, twidth, theight, GL_RGBA,
-                    GL_UNSIGNED_BYTE, m_texdata);
+                    GL_UNSIGNED_BYTE, m_texdata_rgba);
     #endif
 
 

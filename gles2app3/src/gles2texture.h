@@ -65,7 +65,8 @@ class Texture {
     int m_attriblocation_position;
     int m_attriblocation_inputtexcoord;
 
-    GLubyte *m_texdata;
+    GLubyte *m_texdata_rgba;
+    GLubyte *m_texdata_bgra;
     GLfloat *m_a_verts;
     GLfloat *m_e_verts;
     GLushort *m_inds;

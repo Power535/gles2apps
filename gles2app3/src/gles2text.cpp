@@ -244,8 +244,9 @@ void render_text(float x, float y, const char *s, ...) {
   glBlendFunc(GL_SRC_ALPHA, GL_ONE_MINUS_SRC_ALPHA);
 
   GLfloat white[4] = {1, 1, 1, 1};
+  GLfloat yellow[4] = {1, 1, 0, 1};
 
-  glUniform4fv(uniform_color, 1, white);
+  glUniform4fv(uniform_color, 1, yellow);
 
   // render_text(a48, -1 + 1000 * sx, 1 - 680 * sy, sx, sy);
 
