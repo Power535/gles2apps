@@ -1,8 +1,8 @@
+#include <stdlib.h>
 #include <linux/fb.h>
 #include <math.h>
 #include <stdint.h>
 #include <stdio.h>
-#include <stdlib.h>
 #include <string.h>
 
 #include <EGL/egl.h>
@@ -504,7 +504,6 @@ void egl_init(EGLDisplay *pdisplay, EGLSurface *psurface, EGLContext *pcontext,
   *pcontext = context;
 
 #if 1
-  typedef void *EGLSyncKHR;
   typedef EGLSyncKHR(EGLAPIENTRYP PFNEGLCREATESYNCKHRPROC)(
       EGLDisplay dpy, EGLenum type, const EGLint *attrib_list);
   typedef EGLBoolean(EGLAPIENTRYP PFNEGLDESTROYSYNCKHRPROC)(EGLDisplay dpy,
@@ -1200,7 +1199,6 @@ static void render(void) {
 #endif
 }
 
-typedef void *EGLSyncKHR;
 static EGLSyncKHR ESK = 0;
 
 void egl_sync(EGLDisplay display) {
