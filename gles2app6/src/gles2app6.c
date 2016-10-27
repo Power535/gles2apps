@@ -1,8 +1,8 @@
-#include <stdlib.h>
 #include <linux/fb.h>
 #include <math.h>
 #include <stdint.h>
 #include <stdio.h>
+#include <stdlib.h>
 #include <string.h>
 
 #include <EGL/egl.h>
@@ -27,18 +27,18 @@
 #endif
 
 #ifdef IS_BCM_NEXUS
+#if 1
+#include <refsw/nexus_config.h>
+#endif
+#include <refsw/default_nexus.h>
 //#define IS_BCM_NEXUS_CLIENT
-#define PLATFORMSERVER_CLIENT
+//#define PLATFORMSERVER_CLIENT
 #if defined(PLATFORMSERVER_CLIENT) || defined(IS_BCM_NEXUS_CLIENT)
 #ifdef IS_BCM_NEXUS_CLIENT
 #include <refsw/nxclient.h>
 #endif
-#include <refsw/nexus_config.h>
-#include <refsw/default_nexus.h>
 #include <refsw/nexus_platform_client.h>
 #else
-#include <refsw/default_nexus.h>
-#include <refsw/nexus_config.h>
 #include <refsw/nexus_core_utils.h>
 #include <refsw/nexus_display.h>
 #include <refsw/nexus_platform.h>
@@ -90,7 +90,7 @@ bool InitPlatform(void) {
   return true;
 }
 
-void DeInitPlatform(void) {
+static void DeInitPlatform(void) {
   NXPL_UnregisterNexusDisplayPlatform(nxpl_handle);
 #ifdef IS_BCM_NEXUS_CLIENT
   NEXUS_SurfaceClient_Release(gs_native_window);
@@ -103,10 +103,8 @@ void DeInitPlatform(void) {
 
 static unsigned int gs_screen_wdt = 1280;
 static unsigned int gs_screen_hgt = 720;
-
 static NEXUS_DisplayHandle gs_nexus_display = 0;
 static void *gs_native_window = 0;
-
 static NXPL_PlatformHandle nxpl_handle = 0;
 
 #if NEXUS_NUM_HDMI_OUTPUTS && !NEXUS_DTV_PLATFORM
@@ -140,10 +138,9 @@ static void hotplug_callback(void *pParam, int iParam) {
 
 #endif
 
-void InitHDMIOutput(NEXUS_DisplayHandle display) {
+static void InitHDMIOutput(NEXUS_DisplayHandle display) {
 
 #if NEXUS_NUM_HDMI_OUTPUTS && !NEXUS_DTV_PLATFORM
-
   NEXUS_HdmiOutputSettings hdmiSettings;
   NEXUS_PlatformConfiguration platform_config;
 
@@ -163,10 +160,8 @@ void InitHDMIOutput(NEXUS_DisplayHandle display) {
     /* Force a hotplug to switch to a supported format if necessary */
     hotplug_callback(platform_config.outputs.hdmi[0], (int)display);
   }
-
 #else
   UNUSED(display);
-
 #endif
 }
 
@@ -230,9 +225,8 @@ bool InitPlatform(void) {
   return succeeded;
 }
 
-void DeInitPlatform(void) {
+static void DeInitPlatform(void) {
   NXPL_DestroyNativeWindow(gs_native_window);
-
   if (gs_nexus_display != 0) {
     NXPL_UnregisterNexusDisplayPlatform(nxpl_handle);
     // NEXUS_SurfaceClient_Release(gs_native_window);
@@ -243,9 +237,7 @@ void DeInitPlatform(void) {
 #endif
 
 #ifdef IS_RPI
-
 static DISPMANX_DISPLAY_HANDLE_T dispman_display = 0;
-
 static EGLNativeWindowType createDispmanxLayer(void) {
   VC_RECT_T dst_rect;
   dst_rect.x = 0;
@@ -277,7 +269,6 @@ static EGLNativeWindowType createDispmanxLayer(void) {
   eglWindow->element = dispman_element;
   eglWindow->width = 1280;
   eglWindow->height = 720;
-
   return eglWindow;
 }
 
@@ -296,14 +287,7 @@ static void destroyDispmanxLayer(EGLNativeWindowType window) {
   vc_dispmanx_update_submit_sync(dispman_update);
   free(eglWindow);
 }
-
 #endif
-
-static PFNEGLCREATESYNCKHRPROC __eglCreateSyncKHR;
-static PFNEGLDESTROYSYNCKHRPROC __eglDestroySyncKHR;
-static PFNEGLCLIENTWAITSYNCKHRPROC __eglClientWaitSyncKHR;
-static PFNEGLGETSYNCATTRIBKHRPROC __eglGetSyncAttribKHR;
-
 #ifdef IS_INTELCE
 static void egl_init(EGLDisplay *pdisplay, EGLSurface *psurface,
                      EGLContext *pcontext, int width, int height,
@@ -346,7 +330,6 @@ static void handle_egl_error(const char *name) {
 }
 
 #ifdef IS_INTELCE
-
 // Plane size and position
 #define ORIGIN_X 0
 #define ORIGIN_Y 0
@@ -376,44 +359,37 @@ static gdl_ret_t setup_plane(gdl_plane_id_t plane) {
   if (GDL_SUCCESS == rc) {
     rc = gdl_plane_config_begin(plane);
   }
-
   if (GDL_SUCCESS == rc) {
     rc = gdl_plane_set_attr(GDL_PLANE_SRC_COLOR_SPACE, &colorSpace);
   }
-
   if (GDL_SUCCESS == rc) {
     rc = gdl_plane_set_attr(GDL_PLANE_PIXEL_FORMAT, &pixelFormat);
   }
-
   if (GDL_SUCCESS == rc) {
     rc = gdl_plane_set_attr(GDL_PLANE_DST_RECT, &dstRect);
   }
-
   if (GDL_SUCCESS == rc) {
     rc = gdl_plane_set_attr(GDL_PLANE_SRC_RECT, &srcRect);
   }
-
   if (GDL_SUCCESS == rc) {
     rc = gdl_plane_config_end(GDL_FALSE);
   } else {
     gdl_plane_config_end(GDL_TRUE);
   }
-
   if (GDL_SUCCESS != rc) {
     fprintf(stderr, "GDL configuration failed! GDL error code is 0x%x\n", rc);
   }
-
   return rc;
 }
-
 #endif
 
 #ifdef IS_INTELCE
-void egl_init(EGLDisplay *pdisplay, EGLSurface *psurface, EGLContext *pcontext,
-              int width, int height, gdl_plane_id_t plane)
+static void egl_init(EGLDisplay *pdisplay, EGLSurface *psurface,
+                     EGLContext *pcontext, int width, int height,
+                     gdl_plane_id_t plane)
 #else
-void egl_init(EGLDisplay *pdisplay, EGLSurface *psurface, EGLContext *pcontext,
-              int width, int height)
+static void egl_init(EGLDisplay *pdisplay, EGLSurface *psurface,
+                     EGLContext *pcontext, int width, int height)
 #endif
 {
   EGLDisplay display;
@@ -424,11 +400,11 @@ void egl_init(EGLDisplay *pdisplay, EGLSurface *psurface, EGLContext *pcontext,
   EGLint major, minor;
   EGLint context_attribs[] = {EGL_CONTEXT_CLIENT_VERSION, 2, EGL_NONE};
   EGLint config_count;
-  EGLint cfg_attribs[] = {EGL_BUFFER_SIZE, EGL_DONT_CARE, EGL_DEPTH_SIZE, 16,
-                          EGL_RED_SIZE, 8, EGL_GREEN_SIZE, 8, EGL_BLUE_SIZE, 8,
-                          EGL_ALPHA_SIZE, 8,
-                          //EGL_SAMPLE_BUFFERS, 1,
-                          //EGL_SAMPLES,        4,
+  EGLint cfg_attribs[] = {EGL_BUFFER_SIZE, EGL_DONT_CARE, EGL_DEPTH_SIZE, 24,
+                          EGL_STENCIL_SIZE, 8, EGL_RED_SIZE, 8, EGL_GREEN_SIZE,
+                          8, EGL_BLUE_SIZE, 8, EGL_ALPHA_SIZE, 8,
+                          // EGL_SAMPLE_BUFFERS, 1,
+                          // EGL_SAMPLES,        4,
                           EGL_RENDERABLE_TYPE, EGL_OPENGL_ES2_BIT, EGL_NONE};
   int i;
 
@@ -462,21 +438,16 @@ void egl_init(EGLDisplay *pdisplay, EGLSurface *psurface, EGLContext *pcontext,
     win_info.clientID = 0;  // FIXME hardcoding
 
     gs_native_window = NXPL_CreateNativeWindow(&win_info);
-
     surface =
         eglCreateWindowSurface(display, configs[0], gs_native_window, NULL);
   }
 #endif
-
 #ifdef IS_RPI
-
   else if (strstr(eglQueryString(display, EGL_VENDOR), "Broadcom")) {
-
     surface = eglCreateWindowSurface(display, configs[0], createDispmanxLayer(),
                                      NULL);
   }
 #endif
-
   else {
     surface = eglCreateWindowSurface(display, configs[0], 0, NULL);
   }
@@ -502,40 +473,21 @@ void egl_init(EGLDisplay *pdisplay, EGLSurface *psurface, EGLContext *pcontext,
   *pdisplay = display;
   *psurface = surface;
   *pcontext = context;
-
-#if 1
-  typedef EGLSyncKHR(EGLAPIENTRYP PFNEGLCREATESYNCKHRPROC)(
-      EGLDisplay dpy, EGLenum type, const EGLint *attrib_list);
-  typedef EGLBoolean(EGLAPIENTRYP PFNEGLDESTROYSYNCKHRPROC)(EGLDisplay dpy,
-                                                            EGLSyncKHR sync);
-  typedef EGLint(EGLAPIENTRYP PFNEGLCLIENTWAITSYNCKHRPROC)(
-      EGLDisplay dpy, EGLSyncKHR sync, EGLint flags, EGLTimeKHR timeout);
-  typedef EGLBoolean(EGLAPIENTRYP PFNEGLGETSYNCATTRIBKHRPROC)(
-      EGLDisplay dpy, EGLSyncKHR sync, EGLint attribute, EGLint * value);
-
-  __eglCreateSyncKHR =
-      (PFNEGLCREATESYNCKHRPROC)eglGetProcAddress("eglCreateSyncKHR");
-  __eglDestroySyncKHR =
-      (PFNEGLDESTROYSYNCKHRPROC)eglGetProcAddress("eglDestroySyncKHR");
-  __eglClientWaitSyncKHR =
-      (PFNEGLCLIENTWAITSYNCKHRPROC)eglGetProcAddress("eglClientWaitSyncKHR");
-  __eglGetSyncAttribKHR =
-      (PFNEGLGETSYNCATTRIBKHRPROC)eglGetProcAddress("eglGetSyncAttribKHR");
-#endif
 }
 
-void egl_exit(EGLDisplay display, EGLSurface surface, EGLContext context) {
+static void egl_exit(EGLDisplay display, EGLSurface surface,
+                     EGLContext context) {
   eglDestroyContext(display, context);
   eglDestroySurface(display, surface);
   eglMakeCurrent(display, EGL_NO_SURFACE, EGL_NO_SURFACE, EGL_NO_CONTEXT);
   eglTerminate(display);
 }
 
-void egl_swap(EGLDisplay display, EGLSurface surface) {
+static void egl_swap(EGLDisplay display, EGLSurface surface) {
   eglSwapBuffers(display, surface);
 }
 
-void Identity(float pMatrix[4][4]) {
+static void Identity(float pMatrix[4][4]) {
   pMatrix[0][0] = 1.0f;
   pMatrix[0][1] = 0.0f;
   pMatrix[0][2] = 0.0f;
@@ -561,14 +513,12 @@ static float Normalize(float afVout[3], float afVin[3]) {
   float fLen;
 
   fLen = afVin[0] * afVin[0] + afVin[1] * afVin[1] + afVin[2] * afVin[2];
-
   if (fLen <= 0.0f) {
     afVout[0] = 0.0f;
     afVout[1] = 0.0f;
     afVout[2] = 0.0f;
     return fLen;
   }
-
   if (fLen == 1.0F) {
     afVout[0] = afVin[0];
     afVout[1] = afVin[1];
@@ -584,7 +534,8 @@ static float Normalize(float afVout[3], float afVin[3]) {
   }
 }
 
-void MultiplyMatrix(float psRes[4][4], float psSrcA[4][4], float psSrcB[4][4]) {
+static void MultiplyMatrix(float psRes[4][4], float psSrcA[4][4],
+                           float psSrcB[4][4]) {
   float fB00, fB01, fB02, fB03;
   float fB10, fB11, fB12, fB13;
   float fB20, fB21, fB22, fB23;
@@ -620,8 +571,8 @@ void MultiplyMatrix(float psRes[4][4], float psSrcA[4][4], float psSrcB[4][4]) {
   }
 }
 
-void Perspective(float pMatrix[4][4], float fovy, float aspect, float zNear,
-                 float zFar) {
+static void Perspective(float pMatrix[4][4], float fovy, float aspect,
+                        float zNear, float zFar) {
   float sine, cotangent, deltaZ;
   float radians;
   float m[4][4] = {{1, 0, 0, 0}, {0, 1, 0, 0}, {0, 0, 1, 0}, {0, 0, 0, 1}};
@@ -646,8 +597,8 @@ void Perspective(float pMatrix[4][4], float fovy, float aspect, float zNear,
   MultiplyMatrix(pMatrix, m, pMatrix);
 }
 
-void Orthographic(float pMatrix[4][4], float left, float right, float bottom,
-                  float top, float zNear, float zFar) {
+static void Orthographic(float pMatrix[4][4], float left, float right,
+                         float bottom, float top, float zNear, float zFar) {
   float deltaX, deltaY, deltaZ;
   float m[4][4] = {{1, 0, 0, 0}, {0, 1, 0, 0}, {0, 0, 1, 0}, {0, 0, 0, 1}};
 
@@ -670,8 +621,8 @@ void Orthographic(float pMatrix[4][4], float left, float right, float bottom,
   MultiplyMatrix(pMatrix, m, pMatrix);
 }
 
-void Frustum(float pMatrix[4][4], float left, float right, float bottom,
-             float top, float zNear, float zFar) {
+static void Frustum(float pMatrix[4][4], float left, float right, float bottom,
+                    float top, float zNear, float zFar) {
   float deltaX, deltaY, deltaZ;
   float m[4][4] = {{1, 0, 0, 0}, {0, 1, 0, 0}, {0, 0, 1, 0}, {0, 0, 0, 1}};
 
@@ -695,7 +646,7 @@ void Frustum(float pMatrix[4][4], float left, float right, float bottom,
   MultiplyMatrix(pMatrix, m, pMatrix);
 }
 
-void Scale(float pMatrix[4][4], float fX, float fY, float fZ) {
+static void Scale(float pMatrix[4][4], float fX, float fY, float fZ) {
   float fM0, fM1, fM2, fM3;
 
   fM0 = fX * pMatrix[0][0];
@@ -726,7 +677,7 @@ void Scale(float pMatrix[4][4], float fX, float fY, float fZ) {
   pMatrix[2][3] = fM3;
 }
 
-void Translate(float pMatrix[4][4], float fX, float fY, float fZ) {
+static void Translate(float pMatrix[4][4], float fX, float fY, float fZ) {
   float fM30, fM31, fM32, fM33;
 
   fM30 = fX * pMatrix[0][0] + fY * pMatrix[1][0] + fZ * pMatrix[2][0] +
@@ -744,7 +695,8 @@ void Translate(float pMatrix[4][4], float fX, float fY, float fZ) {
   pMatrix[3][3] = fM33;
 }
 
-void Rotate(float pMatrix[4][4], float fX, float fY, float fZ, float fAngle) {
+static void Rotate(float pMatrix[4][4], float fX, float fY, float fZ,
+                   float fAngle) {
   float fRadians, fSine, fCosine, fAB, fBC, fCA, fT;
   float afAv[4], afAxis[4];
   float afMatrix[4][4];
@@ -784,64 +736,7 @@ void Rotate(float pMatrix[4][4], float fX, float fY, float fZ, float fAngle) {
   MultiplyMatrix(pMatrix, afMatrix, pMatrix);
 }
 
-static EGLDisplay global_display;
-static EGLSurface global_surface;
-static EGLContext global_context;
-
-static int hProgramHandle;
-static int position_attriblocation;
-static int inputtexcoord_attriblocation;
-static int mvp_pos;
-int framecount;
-
-static GLfloat projection[4][4] = {
-    {1, 0, 0, 0}, {0, 1, 0, 0}, {0, 0, 1, 0}, {0, 0, 0, 1}};
-static GLfloat modelview[4][4] = {
-    {1, 0, 0, 0}, {0, 1, 0, 0}, {0, 0, 1, 0}, {0, 0, 0, 1}};
-static GLfloat mvp[4][4] = {
-    {1, 0, 0, 0}, {0, 1, 0, 0}, {0, 0, 1, 0}, {0, 0, 0, 1}};
-
-#define FLOAT_TO_FIXED(x) (long)((x)*65536.0f)
-static const char *const vertShader =
-    "\n\
-attribute vec4 position;              \n\
-attribute vec2 inputtexcoord;         \n\
-varying vec2 texcoord;                \n\
-uniform mat4 mvp;                     \n\
-void main(void)                       \n\
-{                                     \n\
-  texcoord = inputtexcoord;           \n\
-  gl_Position = mvp * position;       \n\
-  gl_Position.z = gl_Position.w;      \n\
-}                                     \n";
-
-static const char *const fragShader =
-    "\n\
-varying highp vec2 texcoord;          \n\
-uniform sampler2D basetexture;        \n\
-void main(void)                       \n\
-{                                     \n\
-  gl_FragColor = texture2D(basetexture, texcoord);       \n\
-}                                     \n";
-
-#if 1
-
-static GLfixed vertices[] = {
-
-    FLOAT_TO_FIXED(0.5),  FLOAT_TO_FIXED(-0.5), FLOAT_TO_FIXED(-0.5),
-    FLOAT_TO_FIXED(-0.5), FLOAT_TO_FIXED(-0.5), FLOAT_TO_FIXED(0.5),
-    FLOAT_TO_FIXED(0.5),  FLOAT_TO_FIXED(0.5),
-
-};
-
-static GLfloat texcoord[] = {
-
-    1.0, 1.0, 0.0, 1.0, 0.0,
-    0.0, 1.0, 0.0
-
-};
-#endif
-int create_program(const char *v, const char *f) {
+static int create_program(const char *v, const char *f) {
   char pszInfoLog[1024];
   int nShaderStatus, nInfoLogLength;
 
@@ -894,335 +789,14 @@ int create_program(const char *v, const char *f) {
   return programhandle;
 }
 
-//  triangle_fan
-//  2 components per vertex attribute : x,y
-//
-//            _____
-//           |\    |
-//  3 ___ 4  | \   |
-//   |\  |   |  \  |
-//   | \ |   |   \ |
-//  2|__\|1  |____\|
-//
-//    x   y
-//    1  -1  1 (right bottom)
-//   -1  -1  2 (left  bottom)
-//   -1   1  3 (left  top   )
-//    1   1  4 (right top   )
-//
-
-GLuint vboId;
-GLuint texId;
-GLuint texId2;
-GLuint rboId;
-GLuint fboId;
-
-
-static void init(EGLDisplay display, int argc, char **argv) {
-  int e;
-
-  hProgramHandle = create_program(vertShader, fragShader);
-
-  glEnable(GL_BLEND);
-  glBlendFunc(GL_SRC_ALPHA, GL_ONE_MINUS_SRC_ALPHA);
-
-  glUseProgram(hProgramHandle);
-  position_attriblocation = glGetAttribLocation(hProgramHandle, "position");
-  inputtexcoord_attriblocation =
-      glGetAttribLocation(hProgramHandle, "inputtexcoord");
-
-  mvp_pos = glGetUniformLocation(hProgramHandle, "mvp");
-
-  GLubyte *lpTex = texdata;
-  GLuint i, j;
-  for (j = 0; j < HEIGHT; j++) {
-    for (i = 0; i < WIDTH; i++) {
-      if ((i ^ j) & 0x80) {
-        lpTex[0] = lpTex[1] = lpTex[2] = 0x00;
-        lpTex[3] = 0x00;
-      } else if ((i ^ j) & 0x40) {
-        lpTex[0] = lpTex[1] = lpTex[2] = 0xff;
-        lpTex[3] = 0xdf;
-      } else {
-        lpTex[0] = lpTex[1] = 0x00;
-        lpTex[2] = 0xff;
-        lpTex[3] = 0xdf;
-      }
-
-      lpTex += 4;
-    }
-  }
-
-  glGenTextures(1, &texId2);
-  glBindTexture(GL_TEXTURE_2D, texId2);
-  glTexImage2D(GL_TEXTURE_2D, 0, GL_RGBA, WIDTH, HEIGHT, 0, GL_RGBA,
-               GL_UNSIGNED_BYTE, texdata);
-  glTexParameterf(GL_TEXTURE_2D, GL_TEXTURE_MIN_FILTER, GL_NEAREST);
-  glTexParameterf(GL_TEXTURE_2D, GL_TEXTURE_MAG_FILTER, GL_NEAREST);
-  glTexParameterf(GL_TEXTURE_2D, GL_TEXTURE_WRAP_S, GL_CLAMP_TO_EDGE);
-  glTexParameterf(GL_TEXTURE_2D, GL_TEXTURE_WRAP_T, GL_CLAMP_TO_EDGE);
-
-/*
- * create fbo
- */
-
-#define TEXTURE_WIDTH 1280
-#define TEXTURE_HEIGHT 720
-
-  glGenTextures(1, &texId);
-  glBindTexture(GL_TEXTURE_2D, texId);
-  glTexParameterf(GL_TEXTURE_2D, GL_TEXTURE_MAG_FILTER, GL_NEAREST);
-  glTexParameterf(GL_TEXTURE_2D, GL_TEXTURE_MIN_FILTER, GL_NEAREST);
-  glTexParameterf(GL_TEXTURE_2D, GL_TEXTURE_WRAP_S, GL_CLAMP_TO_EDGE);
-  glTexParameterf(GL_TEXTURE_2D, GL_TEXTURE_WRAP_T, GL_CLAMP_TO_EDGE);
-  glTexImage2D(GL_TEXTURE_2D, 0, GL_RGBA, TEXTURE_WIDTH, TEXTURE_HEIGHT, 0,
-               GL_RGBA, GL_UNSIGNED_BYTE, 0);
-  glBindTexture(GL_TEXTURE_2D, 0);
-
-  // create a renderbuffer object to store depth info
-  glGenRenderbuffers(1, &rboId);
-  glBindRenderbuffer(GL_RENDERBUFFER, rboId);
-  glRenderbufferStorage(GL_RENDERBUFFER, GL_DEPTH_COMPONENT16, TEXTURE_WIDTH,
-                        TEXTURE_HEIGHT);
-  glBindRenderbuffer(GL_RENDERBUFFER, 0);
-
-  glGenFramebuffers(1, &fboId);
-  glBindFramebuffer(GL_FRAMEBUFFER, fboId);
-
-  // attach the texture to FBO color attachment point
-  glFramebufferTexture2D(GL_FRAMEBUFFER,        // 1. fbo target: GL_FRAMEBUFFER
-                         GL_COLOR_ATTACHMENT0,  // 2. attachment point
-                         GL_TEXTURE_2D,         // 3. tex target: GL_TEXTURE_2D
-                         texId,                 // 4. tex ID
-                         0);                    // 5. mipmap level: 0(base)
-
-  // attach the renderbuffer to depth attachment point
-  glFramebufferRenderbuffer(GL_FRAMEBUFFER,  // 1. fbo target: GL_FRAMEBUFFER
-                            GL_DEPTH_ATTACHMENT,  // 2. attachment point
-                            GL_RENDERBUFFER,  // 3. rbo target: GL_RENDERBUFFER
-                            rboId);           // 4. rbo ID
-
-  // check FBO status
-  GLenum status = glCheckFramebufferStatus(GL_FRAMEBUFFER);
-  if (status != GL_FRAMEBUFFER_COMPLETE) {
-    fprintf(stderr, "fbo error 0x%08x\n", status);
-  }
-
-  // switch back to window-system-provided framebuffer
-  glBindFramebuffer(GL_FRAMEBUFFER, 0);
-
-  e = glGetError();
-  if (e != GL_NO_ERROR) {
-    printf("GL ERROR = %x\n", e);
-  }
-}
-
-pthread_mutex_t lock;
-pthread_t tid1;
-
-void *myThreadFun1(void *vargp) {
-  EGLConfig configs[2];
-  EGLBoolean eRetStatus;
-  EGLint major, minor;
-  EGLint context_attribs[] = {EGL_CONTEXT_CLIENT_VERSION, 2, EGL_NONE};
-  EGLint config_count;
-  EGLint cfg_attribs[] = {EGL_BUFFER_SIZE,
-                          EGL_DONT_CARE,
-                          EGL_DEPTH_SIZE,
-                          16,
-                          EGL_RED_SIZE,
-                          8,
-                          EGL_GREEN_SIZE,
-                          8,
-                          EGL_BLUE_SIZE,
-                          8,
-                          EGL_ALPHA_SIZE,
-                          8,
-                          //EGL_SAMPLE_BUFFERS, 1,
-                          //EGL_SAMPLES,        4,
-                          EGL_RENDERABLE_TYPE,
-                          EGL_OPENGL_ES2_BIT,
-                          EGL_NONE};
-
-  eglGetConfigs(global_display, configs, 2, &config_count);
-  eglChooseConfig(global_display, cfg_attribs, configs, 2, &config_count);
-
-  EGLContext context = eglCreateContext(global_display, configs[0],
-                                        global_context, context_attribs);
-  if (context == EGL_NO_CONTEXT) {
-    handle_egl_error("eglCreateContext");
-  }
-
-  if (!eglMakeCurrent(global_display, global_surface, global_surface, context))
-    handle_egl_error("threadFun1, eglMakeCurrent");
-
-  int prog = create_program(vertShader, fragShader);
-  glEnable(GL_BLEND);
-  glBlendFunc(GL_SRC_ALPHA, GL_ONE_MINUS_SRC_ALPHA);
-
-  if (!eglMakeCurrent(global_display, EGL_NO_SURFACE, EGL_NO_SURFACE,
-                      EGL_NO_CONTEXT))
-    handle_egl_error("threadFun1, eglMakeCurrent");
-
-  usleep(1 * 1000 * 1000);
-
-  while (1) {
-// printf("thread1\n");
-
-#if 1
-    pthread_mutex_lock(&lock);
-    if (!eglMakeCurrent(global_display, global_surface, global_surface,
-                        context))
-      handle_egl_error("threadFun1, eglMakeCurrent");
-
-    glBindFramebuffer(GL_FRAMEBUFFER, fboId);
-
-    glClearColor(1, 0, 0, 1);
-    glClear(GL_COLOR_BUFFER_BIT);
-    glUseProgram(prog);
-
-    glBindTexture(GL_TEXTURE_2D, texId2);
-
-    glEnableVertexAttribArray(position_attriblocation);
-    glVertexAttribPointer(position_attriblocation, 2, GL_FIXED, 0, 0, vertices);
-
-    glEnableVertexAttribArray(inputtexcoord_attriblocation);
-    glVertexAttribPointer(inputtexcoord_attriblocation, 2, GL_FLOAT, 0, 0,
-                          texcoord);
-
-    Identity(projection);
-    Perspective(projection, 90, 1, 0, 1);
-    Identity(modelview);
-    Translate(modelview, 0, 0, -0.5);
-
-    Rotate(modelview, 0, 0, 1, framecount);
-    MultiplyMatrix(mvp, modelview, projection);
-    glUniformMatrix4fv(mvp_pos, 1, GL_FALSE, &mvp[0][0]);
-
-    glDrawArrays(GL_TRIANGLE_FAN, 0, 4);
-
-    if (!eglMakeCurrent(global_display, EGL_NO_SURFACE, EGL_NO_SURFACE,
-                        EGL_NO_CONTEXT))
-      handle_egl_error("threadFun1, eglMakeCurrent");
-    pthread_mutex_unlock(&lock);
-#endif
-
-    usleep(40 * 1000);
-  }
-  // return NULL;
-}
-
-static void render(void) {
-
-#if 0
-  if (!eglMakeCurrent(global_display, global_surface, global_surface,
-                      global_context))
-    handle_egl_error("eglMakeCurrent");
-
-    /*
-     * Render _to_ texture
-     */
-    glBindFramebuffer(GL_FRAMEBUFFER, fboId);
-
-  glClearColor(0, 1, 0, 1);
-  glClear(GL_COLOR_BUFFER_BIT);
-  glUseProgram(hProgramHandle);
-
-  glBindTexture(GL_TEXTURE_2D, texId2);
-
-  glEnableVertexAttribArray(position_attriblocation);
-  glVertexAttribPointer(position_attriblocation, 2, GL_FIXED, 0, 0, vertices);
-
-  glEnableVertexAttribArray(inputtexcoord_attriblocation);
-  glVertexAttribPointer(inputtexcoord_attriblocation, 2, GL_FLOAT, 0, 0,
-                        texcoord);
-
-  Identity(projection);
-  Perspective(projection, 90, 1, 0, 1);
-  Identity(modelview);
-  Translate(modelview, 0, 0, -0.5);
-
-  Rotate(modelview, 0, 0, 1, framecount);
-  MultiplyMatrix(mvp, modelview, projection);
-  glUniformMatrix4fv(mvp_pos, 1, GL_FALSE, &mvp[0][0]);
-
-  glDrawArrays(GL_TRIANGLE_FAN, 0, 4);
-
-#endif
-
-#if 1
-  pthread_mutex_lock(&lock);
-  if (!eglMakeCurrent(global_display, global_surface, global_surface,
-                      global_context))
-    handle_egl_error("render, eglMakeCurrent");
-#endif
-
-  // fprintf(stderr, "render\n");
-  /*
-   * Render _the_ texture
-   */
-
-  static EGLSyncKHR ESK = 0;
-
-  if (ESK) {
-    __eglDestroySyncKHR(global_display, ESK);
-    ESK = 0;
-    glFlush();
-  }
-
-  glBindFramebuffer(GL_FRAMEBUFFER, 0);
-  glUseProgram(hProgramHandle);
-
-  glClearColor(0, 1, 0, 1);
-  glClear(GL_COLOR_BUFFER_BIT);
-
-  glBindTexture(GL_TEXTURE_2D, texId);
-  glEnableVertexAttribArray(position_attriblocation);
-  glVertexAttribPointer(position_attriblocation, 2, GL_FIXED, 0, 0, vertices);
-
-  glEnableVertexAttribArray(inputtexcoord_attriblocation);
-  glVertexAttribPointer(inputtexcoord_attriblocation, 2, GL_FLOAT, 0, 0,
-                        texcoord);
-
-  Identity(projection);
-  Perspective(projection, 90, 1, 0, 1);
-  Identity(modelview);
-  Translate(modelview, 0, 0, -0.5);
-  Rotate(modelview, 0, 1, 0, framecount);
-  MultiplyMatrix(mvp, modelview, projection);
-  glUniformMatrix4fv(mvp_pos, 1, GL_FALSE, &mvp[0][0]);
-
-  glDrawArrays(GL_TRIANGLE_FAN, 0, 4);
-
-  framecount++;
-
-  ESK = __eglCreateSyncKHR(global_display, EGL_SYNC_FENCE_KHR, 0);
-  // glFlush is necessary to make sure that our fence creation reaches the GL
-  // server before we try waiting on it from a different context
-  glFlush();
-
-  usleep(20 * 1000);
-
-  egl_swap(global_display, global_surface);
-
-#if 1
-  if (!eglMakeCurrent(global_display, EGL_NO_SURFACE, EGL_NO_SURFACE,
-                      EGL_NO_CONTEXT))
-    handle_egl_error("render, eglMakeCurrent");
-  pthread_mutex_unlock(&lock);
-#endif
-}
-
-
-//  EGLint ret;
-//  do {
-//    ret = __eglClientWaitSyncKHR(display, ESK, EGL_SYNC_FLUSH_COMMANDS_BIT_KHR,
-//                                 500000000);
-//  } while (ret == EGL_TIMEOUT_EXPIRED_KHR);
+static EGLDisplay global_display;
+static EGLSurface global_surface;
+static EGLContext global_context;
+
+static void _init(void);
+static void _render(void);
 
 int main(int argc, char **argv) {
-  int i;
-
   struct fb_var_screeninfo varInfo;
 
 #ifdef IS_INTELCE
@@ -1232,13 +806,11 @@ int main(int argc, char **argv) {
   egl_init(&global_display, &global_surface, &global_context, varInfo.xres,
            varInfo.yres, plane);
 #endif
-
 #ifdef IS_BCM_NEXUS
   InitPlatform();
   egl_init(&global_display, &global_surface, &global_context, varInfo.xres,
            varInfo.yres);
 #endif
-
 #ifdef IS_RPI
   bcm_host_init();
   dispman_display = vc_dispmanx_display_open(0 /* LCD */);
@@ -1246,14 +818,9 @@ int main(int argc, char **argv) {
            varInfo.yres);
 #endif
 
-  init(global_display, argc, argv);
-
-  pthread_mutex_init(&lock, NULL);
-  pthread_create(&tid1, NULL, myThreadFun1, NULL);
-
-  glClearColor(0, 0, 0, 0);
+  _init();
   while (1) {
-    render();
+    _render();
   }
 
 term:
@@ -1262,17 +829,409 @@ term:
 #ifdef IS_INTELCE
   gdl_close();
 #endif
-
 #ifdef IS_BCM_NEXUS
   DeInitPlatform();
 #endif
-
 #ifdef IS_RPI
 // destroyDispmanxLayer(window);
 #endif
 
-  pthread_join(tid1, NULL);
-  pthread_mutex_destroy(&lock);
-
   return 0;
+}
+
+/*
+ * -----------------------------------------------------------------------
+ * -----------------------------------------------------------------------
+ * -----------------------------------------------------------------------
+ * -----------------------------------------------------------------------
+ */
+
+static int program_handle1;
+static int position_attriblocation1;
+static int inputtexcoord_attriblocation1;
+static int mvp_pos1;
+
+static int program_handle2;
+static int position_attriblocation2;
+static int inputtexcoord_attriblocation2;
+static int mvp_pos2;
+
+EGLContext context2;
+
+int framecount;
+
+static const char *const vertShader =
+    "\n\
+attribute vec4 position;              \n\
+attribute vec2 inputtexcoord;         \n\
+varying vec2 texcoord;                \n\
+uniform mat4 mvp;                     \n\
+void main(void)                       \n\
+{                                     \n\
+  texcoord = inputtexcoord;           \n\
+  gl_Position = mvp * position;       \n\
+  gl_Position.z = gl_Position.w;      \n\
+}                                     \n";
+
+static const char *const fragShader =
+    "\n\
+varying highp vec2 texcoord;          \n\
+uniform sampler2D basetexture;        \n\
+void main(void)                       \n\
+{                                     \n\
+  gl_FragColor = texture2D(basetexture, texcoord);       \n\
+}                                     \n";
+
+static const char *const fragShaderRed =
+    "\n\
+void main(void)                       \n\
+{                                     \n\
+  gl_FragColor = vec4(1,0,0,1);       \n\
+}                                     \n";
+
+static const char *const fragShaderBlue =
+    "\n\
+void main(void)                       \n\
+{                                     \n\
+  gl_FragColor = vec4(0,0,1,1);       \n\
+}                                     \n";
+
+#define FLOAT_TO_FIXED(x) (int)((x)*65536.0f)
+
+//  GL_TRIANGLE_STRIP
+//  After specifying the first three vertices for the initial triangle, you only
+//  need to specify a single point for each additional triangle.
+//  Using default CCW (counter clockwise winding)
+//
+//  QUAD - GL_TRIANGLE_STRIP
+//
+//  0 ___2   ___4
+//   |  /  |    /  |
+//   | /   |   /   |   ........
+//   |/  __|  / ___|
+//  1      3       5
+
+static GLfixed quad_tristrip_verts[] = {
+    FLOAT_TO_FIXED(-1.0), FLOAT_TO_FIXED(1.0),   // 0
+    FLOAT_TO_FIXED(-1.0), FLOAT_TO_FIXED(-1.0),  // 1
+    FLOAT_TO_FIXED(1.0),  FLOAT_TO_FIXED(1.0),   // 2
+    FLOAT_TO_FIXED(1.0),  FLOAT_TO_FIXED(-1.0),  // 3
+    FLOAT_TO_FIXED(2.0),  FLOAT_TO_FIXED(1.0),   // 4
+    FLOAT_TO_FIXED(2.0),  FLOAT_TO_FIXED(-1.0),  // 5
+};
+
+static GLfloat quad_tristrip_texcoords[] = {
+    1.0, 1.0,  //
+    0.0, 1.0,  //
+    1.0, 0.0,  //
+    0.0, 0.0   //
+};
+
+static GLushort quad_tristrip_inds[] = {0, 1, 2, 3, 4, 5};
+
+//  GL_TRIANGLE_FAN
+//
+//  QUAD - GL_TRIANGLE_FAN
+//  Using default CCW (counter clockwise winding)
+//
+//  2 ___1
+//   |  /  |
+//   | /   |
+//  0|/  __|3
+//
+//
+
+static GLfixed quad_trifan_verts[] = {
+    FLOAT_TO_FIXED(-1.0), FLOAT_TO_FIXED(-1.0),  //
+    FLOAT_TO_FIXED(1.0),  FLOAT_TO_FIXED(1.0),   //
+    FLOAT_TO_FIXED(-1.0), FLOAT_TO_FIXED(1.0),   //
+    FLOAT_TO_FIXED(1.0),  FLOAT_TO_FIXED(-1.0),  //
+};
+
+static GLfloat quad_trifan_texcoords[] = {1.0, 1.0, 0.0, 1.0,
+                                          1.0, 0.0, 0.0, 0.0};
+
+static GLushort quad_trifan_inds[] = {0, 1, 2, 3};
+
+//    x   y
+//    1  -1  1 (right bottom)
+//   -1  -1  2 (left  bottom)
+//   -1   1  3 (left  top   )
+//    1   1  4 (right top   )
+//
+
+GLuint tex1Id, tex2Id;
+GLuint vbo1aId, vbo1bId, vbo1cId;
+GLuint vbo2aId, vbo2bId, vbo2cId;
+GLuint rboId;
+GLuint fboId;
+
+// Number of points used for half circle.
+#define HALF_PREC1 10
+GLfloat circle_tristrip1_verts[2 * HALF_PREC1 * 2];
+GLushort circle_tristrip1_inds[2 + HALF_PREC1];
+
+#define HALF_PREC2 50
+GLfloat circle_tristrip2_verts[2 * HALF_PREC2 * 2];
+GLushort circle_tristrip2_inds[2 + HALF_PREC2];
+
+static void circle_triangle_strip(int halfcirclepoints, float radius,
+                                  GLfloat *coords, GLushort *inds) {
+  const float angInc = PI / halfcirclepoints;
+  const float cosInc = cos(angInc);
+  const float sinInc = sin(angInc);
+
+  unsigned coordIdx = 0;
+  unsigned short indIdx = 0;
+
+  coords[coordIdx++] = radius;
+  coords[coordIdx++] = 0.0f;
+
+  inds[indIdx] = indIdx++;
+
+  float xc = radius;
+  float yc = 0.0f;
+  unsigned iAng;
+  for (iAng = 1; iAng < halfcirclepoints; ++iAng) {
+    float xcNew = cosInc * xc - sinInc * yc;
+    yc = sinInc * xc + cosInc * yc;
+    xc = xcNew;
+    coords[coordIdx++] = xc;
+    coords[coordIdx++] = yc;
+    inds[indIdx] = indIdx++;
+    coords[coordIdx++] = xc;
+    coords[coordIdx++] = -yc;
+    inds[indIdx] = indIdx++;
+  }
+  coords[coordIdx++] = -radius;
+  coords[coordIdx++] = 0.0f;
+  inds[indIdx] = indIdx++;
+}
+
+static int _context2_init(void) {
+  static EGLConfig configs[2];
+  EGLBoolean eRetStatus;
+  EGLint major, minor;
+  EGLint context_attribs[] = {EGL_CONTEXT_CLIENT_VERSION, 2, EGL_NONE};
+  EGLint config_count;
+  EGLint cfg_attribs[] = {EGL_BUFFER_SIZE, EGL_DONT_CARE, EGL_DEPTH_SIZE, 24,
+                          EGL_STENCIL_SIZE, 8, EGL_RED_SIZE, 8, EGL_GREEN_SIZE,
+                          8, EGL_BLUE_SIZE, 8, EGL_ALPHA_SIZE, 8,
+                          // EGL_SAMPLE_BUFFERS, 1,
+                          // EGL_SAMPLES,        4,
+                          EGL_RENDERABLE_TYPE, EGL_OPENGL_ES2_BIT, EGL_NONE};
+
+  eglGetConfigs(global_display, configs, 2, &config_count);
+  eglChooseConfig(global_display, cfg_attribs, configs, 2, &config_count);
+  context2 = eglCreateContext(global_display, configs[0], global_context,
+                              context_attribs);
+  if (context2 == EGL_NO_CONTEXT) {
+    handle_egl_error("eglCreateContext");
+  }
+
+  if (!eglMakeCurrent(global_display, global_surface, global_surface, context2))
+    handle_egl_error("eglMakeCurrent");
+
+  glEnable(GL_BLEND);
+  glBlendFunc(GL_SRC_ALPHA, GL_ONE_MINUS_SRC_ALPHA);
+
+  program_handle2 = create_program(vertShader, fragShaderBlue);
+
+/*
+ * create fbo
+ */
+#define TEXTURE_WIDTH 1280
+#define TEXTURE_HEIGHT 720
+
+  glGenTextures(1, &tex2Id);
+  glBindTexture(GL_TEXTURE_2D, tex2Id);
+  glTexParameterf(GL_TEXTURE_2D, GL_TEXTURE_MAG_FILTER, GL_NEAREST);
+  glTexParameterf(GL_TEXTURE_2D, GL_TEXTURE_MIN_FILTER, GL_NEAREST);
+  glTexParameterf(GL_TEXTURE_2D, GL_TEXTURE_WRAP_S, GL_CLAMP_TO_EDGE);
+  glTexParameterf(GL_TEXTURE_2D, GL_TEXTURE_WRAP_T, GL_CLAMP_TO_EDGE);
+  glTexImage2D(GL_TEXTURE_2D, 0, GL_RGBA, TEXTURE_WIDTH, TEXTURE_HEIGHT, 0,
+               GL_RGBA, GL_UNSIGNED_BYTE, 0);
+
+  glGenRenderbuffers(1, &rboId);
+  glBindRenderbuffer(GL_RENDERBUFFER, rboId);
+  glRenderbufferStorage(GL_RENDERBUFFER, GL_DEPTH24_STENCIL8_OES, TEXTURE_WIDTH,
+                        TEXTURE_HEIGHT);
+  glBindRenderbuffer(GL_RENDERBUFFER, 0);
+
+  glGenFramebuffers(1, &fboId);
+  glBindFramebuffer(GL_FRAMEBUFFER, fboId);
+
+  glFramebufferTexture2D(GL_FRAMEBUFFER, GL_COLOR_ATTACHMENT0, GL_TEXTURE_2D,
+                         tex2Id, 0);
+
+  glFramebufferRenderbuffer(GL_FRAMEBUFFER, GL_DEPTH_ATTACHMENT,
+                            GL_RENDERBUFFER, rboId);
+
+  glFramebufferRenderbuffer(GL_FRAMEBUFFER, GL_STENCIL_ATTACHMENT,
+                            GL_RENDERBUFFER, rboId);
+
+  GLenum status = glCheckFramebufferStatus(GL_FRAMEBUFFER);
+  if (status != GL_FRAMEBUFFER_COMPLETE) {
+    fprintf(stderr, "FBO ERROR = 0x%08x\n", status);
+  }
+
+  EGLint e = glGetError();
+  if (e != GL_NO_ERROR) {
+    printf("GL ERROR = 0x%08x\n", e);
+  }
+
+  position_attriblocation2 = glGetAttribLocation(program_handle2, "position");
+  mvp_pos2 = glGetUniformLocation(program_handle2, "mvp");
+
+  circle_triangle_strip(HALF_PREC2, 1.0f, circle_tristrip2_verts,
+                        circle_tristrip2_inds);
+  glGenBuffers(1, &vbo2aId);
+  glBindBuffer(GL_ARRAY_BUFFER, vbo2aId);
+  glBufferData(GL_ARRAY_BUFFER, 2 * HALF_PREC2 * 2 * sizeof(GLfloat),
+               circle_tristrip2_verts, GL_DYNAMIC_DRAW);
+  glBindBuffer(GL_ARRAY_BUFFER, 0);
+
+  glGenBuffers(1, &vbo2bId);
+  glBindBuffer(GL_ELEMENT_ARRAY_BUFFER, vbo2bId);
+  glBufferData(GL_ELEMENT_ARRAY_BUFFER, sizeof(circle_tristrip2_inds),
+               circle_tristrip2_inds, GL_STATIC_DRAW);
+
+  glGenBuffers(1, &vbo2cId);
+  glBindBuffer(GL_ELEMENT_ARRAY_BUFFER, vbo2cId);
+
+  glBindBuffer(GL_ARRAY_BUFFER, 0);
+  glBindBuffer(GL_ELEMENT_ARRAY_BUFFER, 0);
+}
+
+static void _context2_render(void) {
+  static GLfloat projection[4][4];
+  static GLfloat modelview[4][4];
+  static GLfloat mvp[4][4];
+
+  if (!eglMakeCurrent(global_display, global_surface, global_surface, context2))
+    handle_egl_error("eglMakeCurrent");
+
+  glBindFramebuffer(GL_FRAMEBUFFER, fboId);
+  glBindTexture(GL_TEXTURE_2D, tex2Id);
+
+  glClearColor(1, 1, 1, 1);
+  glClear(GL_COLOR_BUFFER_BIT);
+  glUseProgram(program_handle2);
+
+  Identity(projection);
+  Perspective(projection, 90, 16.0 / 9, 0, 1);
+  Identity(modelview);
+  Translate(modelview, 0, 0, -1.1);
+  // Rotate(modelview, 0, 1, 0, framecount);
+  MultiplyMatrix(mvp, modelview, projection);
+  glUniformMatrix4fv(mvp_pos2, 1, GL_FALSE, &mvp[0][0]);
+
+  glEnableVertexAttribArray(position_attriblocation2);
+
+#if 0
+  glVertexAttribPointer(position_attriblocation2, 2, GL_FIXED, 0, 0, quad_tristrip_verts);
+  glDrawArrays(GL_TRIANGLE_STRIP, 0, 4);
+#else
+  circle_triangle_strip(HALF_PREC2, 1.0f * cos((framecount % 180) * PI / 180),
+                        circle_tristrip2_verts, circle_tristrip2_inds);
+  glBindBuffer(GL_ARRAY_BUFFER, vbo2aId);
+  glBufferSubData(GL_ARRAY_BUFFER, 0, 2 * HALF_PREC2 * 2 * sizeof(GLfloat),
+                  circle_tristrip2_verts);
+  glVertexAttribPointer(position_attriblocation2, 2, GL_FLOAT, GL_FALSE, 0, 0);
+  // glDrawArrays(GL_TRIANGLE_STRIP, 0, 2 * HALF_PREC2);
+
+  // glBindBuffer(GL_ELEMENT_ARRAY_BUFFER, vbo2bId);
+  glDrawElements(GL_TRIANGLE_STRIP, sizeof(circle_tristrip2_inds),
+                 GL_UNSIGNED_SHORT, circle_tristrip2_inds);
+  // glDrawElements(GL_TRIANGLE_STRIP, sizeof(quad_tristrip_inds),
+  //               GL_UNSIGNED_SHORT, 0);
+
+  glBindBuffer(GL_ARRAY_BUFFER, 0);
+#endif
+}
+
+static void _init(void) {
+  _context2_init();
+
+  if (!eglMakeCurrent(global_display, global_surface, global_surface,
+                      global_context))
+    handle_egl_error("eglMakeCurrent");
+
+  glEnable(GL_BLEND);
+  glBlendFunc(GL_SRC_ALPHA, GL_ONE_MINUS_SRC_ALPHA);
+
+  program_handle1 = create_program(vertShader, fragShader);
+
+  position_attriblocation1 = glGetAttribLocation(program_handle1, "position");
+  inputtexcoord_attriblocation1 =
+      glGetAttribLocation(program_handle1, "inputtexcoord");
+  mvp_pos1 = glGetUniformLocation(program_handle1, "mvp");
+
+  glGenBuffers(1, &vbo1aId);
+  glBindBuffer(GL_ARRAY_BUFFER, vbo1aId);
+  glBufferData(GL_ARRAY_BUFFER, sizeof(quad_tristrip_verts),
+               quad_tristrip_verts, GL_DYNAMIC_DRAW);
+  glBindBuffer(GL_ARRAY_BUFFER, 0);
+
+  glGenBuffers(1, &vbo1bId);
+  glBindBuffer(GL_ELEMENT_ARRAY_BUFFER, vbo1bId);
+  glBufferData(GL_ELEMENT_ARRAY_BUFFER, sizeof(quad_tristrip_inds),
+               quad_tristrip_inds, GL_STATIC_DRAW);
+  glBindBuffer(GL_ELEMENT_ARRAY_BUFFER, 0);
+}
+
+static void _render(void) {
+  static GLfloat projection[4][4];
+  static GLfloat modelview[4][4];
+  static GLfloat mvp[4][4];
+
+  _context2_render();
+
+  if (!eglMakeCurrent(global_display, global_surface, global_surface,
+                      global_context))
+    handle_egl_error("eglMakeCurrent");
+
+  glBindFramebuffer(GL_FRAMEBUFFER, 0);
+  glUseProgram(program_handle1);
+
+  glClearColor(1, 0, 0, 1);
+  glClear(GL_COLOR_BUFFER_BIT);
+
+  Identity(projection);
+  Perspective(projection, 90, 16.0 / 9, 0, 1);
+  Identity(modelview);
+  Translate(modelview, 0, 0, -2.1);
+  Rotate(modelview, 0, 1, 0, framecount);
+  MultiplyMatrix(mvp, modelview, projection);
+  glUniformMatrix4fv(mvp_pos1, 1, GL_FALSE, &mvp[0][0]);
+
+  glBindTexture(GL_TEXTURE_2D, tex2Id);
+
+  glEnableVertexAttribArray(inputtexcoord_attriblocation1);
+  glEnableVertexAttribArray(position_attriblocation1);
+
+  glVertexAttribPointer(inputtexcoord_attriblocation1, 2, GL_FLOAT, 0, 0,
+                        quad_tristrip_texcoords);
+
+#if 0
+  glVertexAttribPointer(position_attriblocation1, 2, GL_FIXED, GL_FALSE, 0, quad_tristrip_verts);
+  glDrawArrays(GL_TRIANGLE_STRIP, 0, sizeof(quad_tristrip_verts) / (4 * 2));
+#else
+  glBindBuffer(GL_ARRAY_BUFFER, vbo1aId);
+  glBufferSubData(GL_ARRAY_BUFFER, 0, sizeof(quad_tristrip_verts),
+                  quad_tristrip_verts);
+  glVertexAttribPointer(position_attriblocation1, 2, GL_FIXED, GL_FALSE, 0, 0);
+
+  // glDrawArrays(GL_TRIANGLE_STRIP, 0, sizeof(quad_tristrip_verts) / (4 * 2));
+  glBindBuffer(GL_ELEMENT_ARRAY_BUFFER, vbo1bId);
+  // glDrawElements(GL_TRIANGLE_STRIP, sizeof(quad_tristrip_inds) / 2,
+  // GL_UNSIGNED_SHORT, quad_tristrip_inds);
+  glDrawElements(GL_TRIANGLE_STRIP, sizeof(quad_tristrip_inds) / 2,
+                 GL_UNSIGNED_SHORT, 0);
+  glBindBuffer(GL_ARRAY_BUFFER, 0);
+#endif
+
+  framecount++;
+
+  egl_swap(global_display, global_surface);
 }
