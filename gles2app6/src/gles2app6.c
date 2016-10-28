@@ -889,6 +889,13 @@ void main(void)                       \n\
   gl_FragColor = vec4(1,0,0,1);       \n\
 }                                     \n";
 
+static const char *const fragShaderGreen =
+    "\n\
+void main(void)                       \n\
+{                                     \n\
+  gl_FragColor = vec4(0,1,0,1);       \n\
+}                                     \n";
+
 static const char *const fragShaderBlue =
     "\n\
 void main(void)                       \n\
@@ -931,13 +938,21 @@ static GLushort quad_tristrip_inds[] = {0, 1, 2, 3, 4, 5};
 
 //  GL_TRIANGLE_FAN
 //
+//  A series of connected triangles sharing the first vertex in fanlike fashion.
+//  The first three vertices form the first triangle and the second triangle is
+//  formed from the next vertex,
+//  one of the sides of the first triangle, and the first vertex.
+//  The triangles are drawn given by (v0, v1, v2), (v0, v2, v3), (v0, v3, v4),
+//  ...
 //  QUAD - GL_TRIANGLE_FAN
 //  Using default CCW (counter clockwise winding)
 //
-//  2 ___1
-//   |  /  |
-//   | /   |
-//  0|/  __|3
+//       4__   3 ___   2
+//       /\    |     /|
+//      /  \   |    / |
+//     /___ \  |  0/__|1
+//    5
+//
 //
 //
 
@@ -948,8 +963,12 @@ static GLfixed quad_trifan_verts[] = {
     FLOAT_TO_FIXED(1.0),  FLOAT_TO_FIXED(-1.0),  //
 };
 
-static GLfloat quad_trifan_texcoords[] = {1.0, 1.0, 0.0, 1.0,
-                                          1.0, 0.0, 0.0, 0.0};
+static GLfloat quad_trifan_texcoords[] = {
+    1.0, 1.0,  //
+    0.0, 1.0,  //
+    1.0, 0.0,  //
+    0.0, 0.0   //
+};
 
 static GLushort quad_trifan_inds[] = {0, 1, 2, 3};
 
@@ -960,6 +979,32 @@ static GLushort quad_trifan_inds[] = {0, 1, 2, 3};
 //    1   1  4 (right top   )
 //
 
+/*
+  Represent vertex attribute data in VBOs:
+
+  (VVVV) (NNNN) (CCCC)
+    One option for using them would be, for each batch (draw call) allocate a
+  separate VBO per vertex attribute.
+    This is certainly possible. If you have vertex, normal, and color as vertex
+  attributes
+
+  (VVVVNNNNCCCC)
+    Another approach is to store the vertex attribute blocks in a batch, one
+  right after the other, in the same block and stuff them all in the same VBO.
+    When specifying the vertex attributes via glVertexAttribPointer? calls
+  you'd pass byte offsets into the VBO to the ptr parameters.
+
+  (VNCVNCVNCVNC)
+    Yet another approach is to interleave the vertex attributes for each vertex
+  in a batch, and then store each of these interleaved vertex blocks
+  sequentially,
+    again combining all the vertex attributes into a single buffer. As before,
+  you'd pass byte offsets into the VBO to the glVertexAttribPointer? ptr
+  parameters,
+    but you'd also use the stride parameter to ensure each vertex attribute
+  array access only touched elements for that attribute array.
+*/
+
 GLuint tex1Id, tex2Id;
 GLuint vbo1aId, vbo1bId, vbo1cId;
 GLuint vbo2aId, vbo2bId, vbo2cId;
@@ -969,25 +1014,22 @@ GLuint fboId;
 // Number of points used for half circle.
 #define HALF_PREC1 10
 GLfloat circle_tristrip1_verts[2 * HALF_PREC1 * 2];
-GLushort circle_tristrip1_inds[2 + HALF_PREC1];
+GLushort circle_tristrip1_inds[2 * HALF_PREC1];
 
 #define HALF_PREC2 50
 GLfloat circle_tristrip2_verts[2 * HALF_PREC2 * 2];
-GLushort circle_tristrip2_inds[2 + HALF_PREC2];
+GLushort circle_tristrip2_inds[2 * HALF_PREC2];
 
 static void circle_triangle_strip(int halfcirclepoints, float radius,
-                                  GLfloat *coords, GLushort *inds) {
+                                  GLfloat *coords) {
   const float angInc = PI / halfcirclepoints;
   const float cosInc = cos(angInc);
   const float sinInc = sin(angInc);
 
   unsigned coordIdx = 0;
-  unsigned short indIdx = 0;
 
   coords[coordIdx++] = radius;
   coords[coordIdx++] = 0.0f;
-
-  inds[indIdx] = indIdx++;
 
   float xc = radius;
   float yc = 0.0f;
@@ -998,14 +1040,11 @@ static void circle_triangle_strip(int halfcirclepoints, float radius,
     xc = xcNew;
     coords[coordIdx++] = xc;
     coords[coordIdx++] = yc;
-    inds[indIdx] = indIdx++;
     coords[coordIdx++] = xc;
     coords[coordIdx++] = -yc;
-    inds[indIdx] = indIdx++;
   }
   coords[coordIdx++] = -radius;
   coords[coordIdx++] = 0.0f;
-  inds[indIdx] = indIdx++;
 }
 
 static int _context2_init(void) {
@@ -1020,6 +1059,7 @@ static int _context2_init(void) {
                           // EGL_SAMPLE_BUFFERS, 1,
                           // EGL_SAMPLES,        4,
                           EGL_RENDERABLE_TYPE, EGL_OPENGL_ES2_BIT, EGL_NONE};
+  int i;
 
   eglGetConfigs(global_display, configs, 2, &config_count);
   eglChooseConfig(global_display, cfg_attribs, configs, 2, &config_count);
@@ -1083,31 +1123,70 @@ static int _context2_init(void) {
   position_attriblocation2 = glGetAttribLocation(program_handle2, "position");
   mvp_pos2 = glGetUniformLocation(program_handle2, "mvp");
 
-  circle_triangle_strip(HALF_PREC2, 1.0f, circle_tristrip2_verts,
-                        circle_tristrip2_inds);
   glGenBuffers(1, &vbo2aId);
   glBindBuffer(GL_ARRAY_BUFFER, vbo2aId);
+  /*circle_triangle_strip(HALF_PREC2, 1.0f, circle_tristrip2_verts);*/
   glBufferData(GL_ARRAY_BUFFER, 2 * HALF_PREC2 * 2 * sizeof(GLfloat),
-               circle_tristrip2_verts, GL_DYNAMIC_DRAW);
-  glBindBuffer(GL_ARRAY_BUFFER, 0);
+               0 /*circle_tristrip2_verts*/, GL_DYNAMIC_DRAW);
 
   glGenBuffers(1, &vbo2bId);
   glBindBuffer(GL_ELEMENT_ARRAY_BUFFER, vbo2bId);
+  for (i = 0; i < (2 + HALF_PREC2 * 2); i++) circle_tristrip2_inds[i] = i;
   glBufferData(GL_ELEMENT_ARRAY_BUFFER, sizeof(circle_tristrip2_inds),
                circle_tristrip2_inds, GL_STATIC_DRAW);
-
-  glGenBuffers(1, &vbo2cId);
-  glBindBuffer(GL_ELEMENT_ARRAY_BUFFER, vbo2cId);
-
-  glBindBuffer(GL_ARRAY_BUFFER, 0);
-  glBindBuffer(GL_ELEMENT_ARRAY_BUFFER, 0);
 }
 
-static void _context2_render(void) {
+static void _context2_draw(float x, float y) {
   static GLfloat projection[4][4];
   static GLfloat modelview[4][4];
   static GLfloat mvp[4][4];
 
+  glUseProgram(program_handle2);
+
+  Identity(projection);
+  Perspective(projection, 90, 16.0 / 9, 0, 1);
+  Identity(modelview);
+  Translate(modelview, x, y, -1.1);
+  // Rotate(modelview, 0, 1, 0, framecount);
+  MultiplyMatrix(mvp, modelview, projection);
+  glUniformMatrix4fv(mvp_pos2, 1, GL_FALSE, &mvp[0][0]);
+
+  glEnableVertexAttribArray(position_attriblocation2);
+
+  circle_triangle_strip(HALF_PREC2, 1.0f * cos((framecount % 180) * PI / 180),
+                        circle_tristrip2_verts);
+  glBufferSubData(GL_ARRAY_BUFFER, 0, 2 * HALF_PREC2 * 2 * sizeof(GLfloat),
+                  circle_tristrip2_verts);
+  glVertexAttribPointer(position_attriblocation2, 2, GL_FLOAT, GL_FALSE, 0, 0);
+  glDrawElements(GL_TRIANGLE_STRIP, sizeof(circle_tristrip2_inds) / 2,
+                 GL_UNSIGNED_SHORT, 0);
+
+
+  #if 0 // does not remove memory leak, is too slow.
+  eglMakeCurrent(global_display, global_surface, global_surface, global_context);
+  eglMakeCurrent(global_display, global_surface, global_surface, context2);
+  #endif
+
+  #if 0 // does not remove memory leak
+  glDisableVertexAttribArray(position_attriblocation2);
+  #endif
+
+  #if 0 // does not remove memory leak
+  glBindBuffer(GL_ARRAY_BUFFER, 0);
+  glBindBuffer(GL_ARRAY_BUFFER, vbo2aId);
+  #endif 
+
+  #if 1 // does remove memory leak,
+  glDeleteBuffers(1, &vbo2aId);
+  glGenBuffers(1, &vbo2aId);
+  glBindBuffer(GL_ARRAY_BUFFER, vbo2aId);
+  glBufferData(GL_ARRAY_BUFFER, 2 * HALF_PREC2 * 2 * sizeof(GLfloat),
+               0 /*circle_tristrip2_verts*/, GL_DYNAMIC_DRAW);
+  #endif
+}
+
+static void _context2_render(void) {
+  int i;
   if (!eglMakeCurrent(global_display, global_surface, global_surface, context2))
     handle_egl_error("eglMakeCurrent");
 
@@ -1116,38 +1195,16 @@ static void _context2_render(void) {
 
   glClearColor(1, 1, 1, 1);
   glClear(GL_COLOR_BUFFER_BIT);
-  glUseProgram(program_handle2);
 
-  Identity(projection);
-  Perspective(projection, 90, 16.0 / 9, 0, 1);
-  Identity(modelview);
-  Translate(modelview, 0, 0, -1.1);
-  // Rotate(modelview, 0, 1, 0, framecount);
-  MultiplyMatrix(mvp, modelview, projection);
-  glUniformMatrix4fv(mvp_pos2, 1, GL_FALSE, &mvp[0][0]);
+  int rows = ceil(sqrt(9));
+  int columns = ceil(1.0 * 9 / rows);
+  int y, x;
 
-  glEnableVertexAttribArray(position_attriblocation2);
-
-#if 0
-  glVertexAttribPointer(position_attriblocation2, 2, GL_FIXED, 0, 0, quad_tristrip_verts);
-  glDrawArrays(GL_TRIANGLE_STRIP, 0, 4);
-#else
-  circle_triangle_strip(HALF_PREC2, 1.0f * cos((framecount % 180) * PI / 180),
-                        circle_tristrip2_verts, circle_tristrip2_inds);
-  glBindBuffer(GL_ARRAY_BUFFER, vbo2aId);
-  glBufferSubData(GL_ARRAY_BUFFER, 0, 2 * HALF_PREC2 * 2 * sizeof(GLfloat),
-                  circle_tristrip2_verts);
-  glVertexAttribPointer(position_attriblocation2, 2, GL_FLOAT, GL_FALSE, 0, 0);
-  // glDrawArrays(GL_TRIANGLE_STRIP, 0, 2 * HALF_PREC2);
-
-  // glBindBuffer(GL_ELEMENT_ARRAY_BUFFER, vbo2bId);
-  glDrawElements(GL_TRIANGLE_STRIP, sizeof(circle_tristrip2_inds),
-                 GL_UNSIGNED_SHORT, circle_tristrip2_inds);
-  // glDrawElements(GL_TRIANGLE_STRIP, sizeof(quad_tristrip_inds),
-  //               GL_UNSIGNED_SHORT, 0);
-
-  glBindBuffer(GL_ARRAY_BUFFER, 0);
-#endif
+  for (y = 0; y < rows; y++) {
+    for (x = 0; x < columns; x++) {
+      _context2_draw(-2.0 + (x * 4.0 / columns), -2.0 + (y * 4.0 / rows));
+    }
+  }
 }
 
 static void _init(void) {
@@ -1171,13 +1228,11 @@ static void _init(void) {
   glBindBuffer(GL_ARRAY_BUFFER, vbo1aId);
   glBufferData(GL_ARRAY_BUFFER, sizeof(quad_tristrip_verts),
                quad_tristrip_verts, GL_DYNAMIC_DRAW);
-  glBindBuffer(GL_ARRAY_BUFFER, 0);
 
   glGenBuffers(1, &vbo1bId);
   glBindBuffer(GL_ELEMENT_ARRAY_BUFFER, vbo1bId);
   glBufferData(GL_ELEMENT_ARRAY_BUFFER, sizeof(quad_tristrip_inds),
                quad_tristrip_inds, GL_STATIC_DRAW);
-  glBindBuffer(GL_ELEMENT_ARRAY_BUFFER, 0);
 }
 
 static void _render(void) {
@@ -1207,29 +1262,24 @@ static void _render(void) {
 
   glBindTexture(GL_TEXTURE_2D, tex2Id);
 
-  glEnableVertexAttribArray(inputtexcoord_attriblocation1);
   glEnableVertexAttribArray(position_attriblocation1);
+  glEnableVertexAttribArray(inputtexcoord_attriblocation1);
 
-  glVertexAttribPointer(inputtexcoord_attriblocation1, 2, GL_FLOAT, 0, 0,
+  glVertexAttribPointer(inputtexcoord_attriblocation1, 2, GL_FLOAT, GL_FALSE, 0,
                         quad_tristrip_texcoords);
 
-#if 0
-  glVertexAttribPointer(position_attriblocation1, 2, GL_FIXED, GL_FALSE, 0, quad_tristrip_verts);
-  glDrawArrays(GL_TRIANGLE_STRIP, 0, sizeof(quad_tristrip_verts) / (4 * 2));
-#else
   glBindBuffer(GL_ARRAY_BUFFER, vbo1aId);
   glBufferSubData(GL_ARRAY_BUFFER, 0, sizeof(quad_tristrip_verts),
                   quad_tristrip_verts);
   glVertexAttribPointer(position_attriblocation1, 2, GL_FIXED, GL_FALSE, 0, 0);
-
-  // glDrawArrays(GL_TRIANGLE_STRIP, 0, sizeof(quad_tristrip_verts) / (4 * 2));
-  glBindBuffer(GL_ELEMENT_ARRAY_BUFFER, vbo1bId);
-  // glDrawElements(GL_TRIANGLE_STRIP, sizeof(quad_tristrip_inds) / 2,
-  // GL_UNSIGNED_SHORT, quad_tristrip_inds);
-  glDrawElements(GL_TRIANGLE_STRIP, sizeof(quad_tristrip_inds) / 2,
+  glDrawElements(GL_TRIANGLE_STRIP, 4 /*sizeof(quad_tristrip_inds) / 2*/,
                  GL_UNSIGNED_SHORT, 0);
+
+  EGLint e = glGetError();
+  if (e != GL_NO_ERROR) {
+    printf("GL ERROR = 0x%08x\n", e);
+  }
   glBindBuffer(GL_ARRAY_BUFFER, 0);
-#endif
 
   framecount++;
 
