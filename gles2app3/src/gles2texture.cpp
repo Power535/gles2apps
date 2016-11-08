@@ -12,6 +12,31 @@
 
 #include <png.h>
 
+static const char *const defaultvertShader = "\n\
+varying vec2 texcoord;                                \n\
+                                                      \n\
+attribute vec3 position;                              \n\
+attribute vec2 inputtexcoord;                         \n\
+                                                      \n\
+uniform mat4 mvp;                                     \n\
+                                                      \n\
+void main(void)                                       \n\
+{                                                     \n\
+   texcoord = inputtexcoord;                          \n\
+                                                      \n\
+   gl_Position = mvp * vec4(position, 1.0);           \n\
+}                                                     \n";
+
+static const char *const defaultfragShader = "\n\
+varying vec2 texcoord;                                \n\
+                                                      \n\
+uniform sampler2D basetexture;                        \n\
+                                                      \n\
+void main(void)                                       \n\
+{                                                     \n\
+   gl_FragColor = texture2D(basetexture, texcoord);   \n\
+}                                                     \n";
+
 static int global_id = 0;
 
 int read_png_file(char *file_name, char **ppbytes, int *width, int *height) {

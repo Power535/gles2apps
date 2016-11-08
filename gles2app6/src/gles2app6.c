@@ -10,6 +10,17 @@
 #include <GLES2/gl2.h>
 #include <GLES2/gl2ext.h>
 
+#define GL_CHECK(x)                                                         \
+  x;                                                                        \
+  {                                                                         \
+    GLint glError = glGetError();                                           \
+    if (glError != GL_NO_ERROR) {                                           \
+      printf("glGetError() = %i (0x%.8x) at %s:%i\n", (signed int)glError,  \
+             (unsigned int)glError, __FILE__, __LINE__);                    \
+      exit(1);                                                              \
+    }                                                                       \
+  }
+
 #include <pthread.h>
 
 #if defined(__i386__)
@@ -818,6 +829,9 @@ int main(int argc, char **argv) {
            varInfo.yres);
 #endif
 
+  fprintf(stderr, "EGL_EXTENSIONS:\"%s\"\n",
+          eglQueryString(global_display, EGL_EXTENSIONS));
+
   _init();
   while (1) {
     _render();
@@ -1092,23 +1106,30 @@ static int _context2_init(void) {
   glTexImage2D(GL_TEXTURE_2D, 0, GL_RGBA, TEXTURE_WIDTH, TEXTURE_HEIGHT, 0,
                GL_RGBA, GL_UNSIGNED_BYTE, 0);
 
-  glGenRenderbuffers(1, &rboId);
+  GL_CHECK(glGenRenderbuffers(1, &rboId));
   glBindRenderbuffer(GL_RENDERBUFFER, rboId);
-  glRenderbufferStorage(GL_RENDERBUFFER, GL_DEPTH24_STENCIL8_OES, TEXTURE_WIDTH,
-                        TEXTURE_HEIGHT);
+
+  #if 0
+  GL_CHECK(glRenderbufferStorage(GL_RENDERBUFFER, GL_DEPTH24_STENCIL8_OES, TEXTURE_WIDTH,
+                        TEXTURE_HEIGHT));
+  #endif
+  GL_CHECK(glRenderbufferStorage(GL_RENDERBUFFER, GL_DEPTH_COMPONENT16, TEXTURE_WIDTH,
+                        TEXTURE_HEIGHT));
+
   glBindRenderbuffer(GL_RENDERBUFFER, 0);
 
   glGenFramebuffers(1, &fboId);
   glBindFramebuffer(GL_FRAMEBUFFER, fboId);
 
-  glFramebufferTexture2D(GL_FRAMEBUFFER, GL_COLOR_ATTACHMENT0, GL_TEXTURE_2D,
-                         tex2Id, 0);
+  GL_CHECK(glFramebufferTexture2D(GL_FRAMEBUFFER, GL_COLOR_ATTACHMENT0, GL_TEXTURE_2D,
+                         tex2Id, 0));
 
   glFramebufferRenderbuffer(GL_FRAMEBUFFER, GL_DEPTH_ATTACHMENT,
                             GL_RENDERBUFFER, rboId);
-
+  #if 0
   glFramebufferRenderbuffer(GL_FRAMEBUFFER, GL_STENCIL_ATTACHMENT,
                             GL_RENDERBUFFER, rboId);
+  #endif
 
   GLenum status = glCheckFramebufferStatus(GL_FRAMEBUFFER);
   if (status != GL_FRAMEBUFFER_COMPLETE) {
@@ -1176,7 +1197,7 @@ static void _context2_draw(float x, float y) {
   glBindBuffer(GL_ARRAY_BUFFER, vbo2aId);
   #endif 
 
-  #if 1 // does remove memory leak,
+  #if 0 // does remove memory leak,
   glDeleteBuffers(1, &vbo2aId);
   glGenBuffers(1, &vbo2aId);
   glBindBuffer(GL_ARRAY_BUFFER, vbo2aId);

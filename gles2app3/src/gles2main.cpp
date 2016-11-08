@@ -30,18 +30,16 @@
 #endif
 
 #ifdef IS_BCM_NEXUS
+#include <refsw/nexus_config.h>
+#include <refsw/default_nexus.h>
 //#define IS_BCM_NEXUS_CLIENT
 #define PLATFORMSERVER_CLIENT
 #if defined(PLATFORMSERVER_CLIENT) || defined(IS_BCM_NEXUS_CLIENT)
 #ifdef IS_BCM_NEXUS_CLIENT
 #include <refsw/nxclient.h>
 #endif
-#include <refsw/nexus_config.h>
-#include <refsw/default_nexus.h>
 #include <refsw/nexus_platform_client.h>
 #else
-#include <refsw/nexus_config.h>
-#include <refsw/default_nexus.h>
 #include <refsw/nexus_core_utils.h>
 #include <refsw/nexus_display.h>
 #include <refsw/nexus_platform.h>
@@ -49,7 +47,6 @@
 #endif
 
 #ifdef IS_RPI
-#include <bcm_host.h>
 extern DISPMANX_DISPLAY_HANDLE_T dispman_display;
 #endif
 

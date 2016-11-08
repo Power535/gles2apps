@@ -22,6 +22,8 @@
 
 
 #ifdef IS_BCM_NEXUS
+#include <refsw/nexus_config.h>
+#include <refsw/default_nexus.h>
 //#define IS_BCM_NEXUS_CLIENT
 #define PLATFORMSERVER_CLIENT
 #if defined(PLATFORMSERVER_CLIENT) || defined(IS_BCM_NEXUS_CLIENT)
@@ -34,9 +36,7 @@ extern "C" {
 #include <refsw/nxclient.h>
 #endif
 
-#include <refsw/nexus_config.h>
 #include <refsw/nexus_platform_client.h>
-#include <refsw/default_nexus.h>
 extern unsigned int gs_screen_wdt;
 extern unsigned int gs_screen_hgt;
 extern void* gs_native_window;
@@ -45,21 +45,14 @@ extern void* gs_native_window;
 }
 #endif
 
-
 #else
-#include <refsw/nexus_config.h>
 #include <refsw/nexus_platform.h>
 #include <refsw/nexus_display.h>
 #include <refsw/nexus_core_utils.h>
-#include <refsw/default_nexus.h>
 extern unsigned int gs_screen_wdt;
 extern unsigned int gs_screen_hgt;
 extern void* gs_native_window;
 #endif
-#endif
-
-#ifdef IS_RPI
-#include <bcm_host.h>
 #endif
 
 #ifdef IS_RPI
@@ -117,7 +110,6 @@ static void destroyDispmanxLayer(EGLNativeWindowType window) {
     vc_dispmanx_update_submit_sync(dispman_update);
     free(eglWindow);
 }
-
 #endif
 
 static const char *const error_strings[] = {
@@ -215,9 +207,7 @@ void egl_init(EGLDisplay *pdisplay, EGLSurface *psurface, EGLContext *pcontext,
 #endif
 
 #ifdef IS_RPI
-
     if (strstr(eglQueryString(display, EGL_VENDOR), "Broadcom")) {
-
         surface = eglCreateWindowSurface(display, configs[0],
                                          createDispmanxLayer(), NULL);
     }
